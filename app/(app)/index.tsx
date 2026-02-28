@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur"; // Novo: Para efeito de vidro
+import { LinearGradient } from "expo-linear-gradient"; // Novo: Para fundo premium
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -8,7 +10,7 @@ import {
   Dimensions,
   Image,
   StyleSheet,
-  Text, // Usando o Text nativo ou mantenha o seu @/components/text se tiver fontes customizadas
+  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,11 +28,13 @@ import Animated, {
 import "react-native-url-polyfill/auto";
 
 const { width } = Dimensions.get("window");
-const SWIPE_RANGE = width * 0.65;
+// Ajuste fino da área de swipe para caber perfeitamente no novo design
+const SWIPE_CONTAINER_WIDTH = width * 0.85;
+const KNOB_SIZE = 56;
+const SWIPE_RANGE = SWIPE_CONTAINER_WIDTH - KNOB_SIZE - 12; // 12 é o padding
 const STORAGE_KEY = "@my_tamagotchi_data";
 
-// Lembre-se de colocar isso em um arquivo .env depois!
-const genAI = new GoogleGenerativeAI("AIzaSyCc9cKtFkHeOyPPo7MFGlxxgHxdZ6O6c-A");
+const genAI = new GoogleGenerativeAI("AIzaSyBs_yliDm_I_gF7-dpRogtEDPgYHOyIjGI");
 
 export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -71,11 +75,19 @@ export default function App() {
         model: "gemini-2.5-flash-image",
       });
 
-      const animals = ["Flamingo", "Parrot", "Horse", "Stork", "Duck"];
+      const animals = [
+        "Flamingo",
+        "Parrot",
+        "Horse",
+        "Stork",
+        "Duck",
+        "Wolf",
+        "Fox",
+        "Stag",
+      ];
 
       const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
 
-      // PROMPT ALTERADO PARA O ESTILO APPLE (Memoji/Animoji)
       const appleStylePrompt = `A cute 3D face of a ${randomAnimal}, in the exact style of Apple iOS Memoji and Animoji. Clean minimalist white background, soft studio lighting, high resolution, glossy finish, adorable, highly detailed 3D render.`;
 
       const storyImageResult = await geminiImage.generateContent({
@@ -132,11 +144,14 @@ export default function App() {
       }
     })
     .onEnd(() => {
-      if (translateX.value > SWIPE_RANGE * 0.7) {
-        translateX.value = withSpring(SWIPE_RANGE);
+      if (translateX.value > SWIPE_RANGE * 0.75) {
+        translateX.value = withSpring(SWIPE_RANGE, {
+          damping: 15,
+          stiffness: 150,
+        });
         runOnJS(handleStart)();
       } else {
-        translateX.value = withSpring(0);
+        translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
       }
     });
 
@@ -145,42 +160,59 @@ export default function App() {
   }));
 
   const animatedTextStyle = useAnimatedStyle(() => ({
-    opacity: 1 - translateX.value / (SWIPE_RANGE / 1.5),
+    opacity: 1 - translateX.value / (SWIPE_RANGE / 2),
+    transform: [{ translateX: translateX.value * 0.1 }], // Leve parallax no texto
   }));
 
+  // Renderização condicional para as telas "Home/Gerando"
   if (showHome) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
+      <View style={[styles.container, styles.centerContainer]}>
+        <LinearGradient
+          colors={["#E8E8ED", "#F2F2F7", "#FFFFFF"]}
+          style={StyleSheet.absoluteFill}
+        />
         {isGenerating ? (
-          <>
-            <ActivityIndicator
-              size="large"
-              color="#007AFF"
-              style={{ marginBottom: 20 }}
-            />
-            <Text style={styles.title}>Generating...</Text>
-            <Text style={styles.subtitle}>Creating your new friend</Text>
-          </>
+          <View style={styles.generatingWrapper}>
+            <BlurView intensity={80} tint="light" style={styles.loadingCard}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.titleLoading}>Incubating...</Text>
+              <Text style={styles.subtitle}>
+                Using Apple Intelligence to create your new friend
+              </Text>
+            </BlurView>
+          </View>
         ) : (
-          <>
+          <View style={styles.welcomeWrapper}>
             <Text style={styles.title}>Welcome Home</Text>
-            {tamagotchi?.url && (
-              <Image
-                source={{ uri: tamagotchi.url }}
-                style={styles.resultImage}
-              />
-            )}
-            <Text style={styles.subtitle}>
-              Your {tamagotchi?.type} is happy to see you.
+            <Text style={styles.subtitleHome}>
+              Say hello to your new {tamagotchi?.type}.
             </Text>
+
+            {tamagotchi?.url && (
+              <View style={styles.resultImageContainer}>
+                <Image
+                  source={{ uri: tamagotchi.url }}
+                  style={styles.resultImage}
+                />
+                <View style={styles.imageGlow} />
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.appleButton}
+              activeOpacity={0.8}
               onPress={() => router.push("/(home)")}
             >
-              <Text style={styles.appleButtonText}>Start Game</Text>
+              <LinearGradient
+                colors={["#007AFF", "#0056B3"]}
+                style={styles.appleButtonGradient}
+              >
+                <Text style={styles.appleButtonText}>Start Journey</Text>
+                <Feather name="chevron-right" size={20} color="#FFF" />
+              </LinearGradient>
             </TouchableOpacity>
-          </>
+          </View>
         )}
       </View>
     );
@@ -189,6 +221,11 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.container}>
+        <LinearGradient
+          colors={["#E2E2EA", "#F2F2F7", "#F9F9FB"]}
+          style={StyleSheet.absoluteFill}
+        />
+
         <View style={styles.imagesContainer}>
           <Image
             style={[styles.card, styles.elephantCard]}
@@ -208,34 +245,37 @@ export default function App() {
               uri: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772153655/hdwxdczisd5dsz5okxaz.png",
             }}
           />
-          <Image
-            style={[styles.card, styles.catCard]}
-            source={{
-              uri: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772185857/z1y9ksanzl2lk9jwrhjj.png",
-            }}
-          />
+          <BlurView intensity={20} tint="light" style={styles.glassWrapper}>
+            <Image
+              style={[styles.card, styles.catCard]}
+              source={{
+                uri: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772185857/z1y9ksanzl2lk9jwrhjj.png",
+              }}
+            />
+          </BlurView>
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Tamagotchi</Text>
-          <Text style={styles.subtitle}>
-            Your new friend is already{"\n"}waiting for you.
+          <Text style={styles.titleMain}>Tamagotchi</Text>
+          <Text style={styles.subtitleMain}>
+            Your next-generation virtual{"\n"}companion is waiting.
           </Text>
         </View>
 
-        <View style={styles.swipeContainer}>
-          <Animated.View style={[styles.textOverlay, animatedTextStyle]}>
-            <Text style={styles.swipeText}>slide to start</Text>
-          </Animated.View>
-
-          <GestureDetector gesture={gesture}>
-            <Animated.View style={[styles.swipeButton, animatedButtonStyle]}>
-              <Feather name="arrow-right" size={24} color="#007AFF" />
+        {/* Swipe Track com BlurView para efeito Dynamic Island/iOS */}
+        <View style={styles.swipeOuterContainer}>
+          <BlurView intensity={60} tint="light" style={styles.swipeTrack}>
+            <Animated.View style={[styles.textOverlay, animatedTextStyle]}>
+              <Text style={styles.swipeText}>slide to begin</Text>
             </Animated.View>
-          </GestureDetector>
-        </View>
 
-        {/* <Button title="Generate tamagotchi" onPress={generateTamagotchiIcon} /> */}
+            <GestureDetector gesture={gesture}>
+              <Animated.View style={[styles.swipeKnob, animatedButtonStyle]}>
+                <Feather name="arrow-right" size={24} color="#1D1D1F" />
+              </Animated.View>
+            </GestureDetector>
+          </BlurView>
+        </View>
       </View>
     </GestureHandlerRootView>
   );
@@ -244,103 +284,123 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F2F2F7", // Cinza super claro clássico do iOS
     alignItems: "center",
     paddingTop: 80,
   },
+  centerContainer: {
+    justifyContent: "center",
+    paddingTop: 0,
+  },
   imagesContainer: {
-    height: "50%",
+    height: "45%",
     width: "100%",
-    marginTop: 20,
+    marginTop: 30,
     position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
   },
   card: {
     position: "absolute",
-    borderRadius: 32, // Cantos bem arredondados (squircle)
+    borderRadius: 36,
     resizeMode: "cover",
-    borderWidth: 4,
-    borderColor: "#FFFFFF", // Borda branca estilo Apple
+    borderWidth: 6,
+    borderColor: "rgba(255,255,255,0.9)",
+  },
+  glassWrapper: {
+    position: "absolute",
+    top: 130,
+    borderRadius: 40,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1, // Sombra suave e difusa
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
   },
   elephantCard: {
-    top: 20,
-    left: width / 2 - 55,
-    width: 110,
-    height: 160,
+    top: 10,
+    left: width / 2 - 60,
+    width: 120,
+    height: 170,
     backgroundColor: "#E4A5B8",
+    transform: [{ rotate: "-5deg" }, { scale: 0.9 }],
+    opacity: 0.9,
   },
   pandaCard: {
-    top: 60,
+    top: 50,
     left: 20,
-    width: 110,
-    height: 160,
+    width: 120,
+    height: 170,
     backgroundColor: "#EAD18D",
+    transform: [{ rotate: "-15deg" }],
   },
   geckoCard: {
     top: 60,
     right: 20,
-    width: 110,
-    height: 160,
+    width: 120,
+    height: 170,
     backgroundColor: "#87BFA3",
+    transform: [{ rotate: "12deg" }],
   },
   catCard: {
-    top: 140,
-    left: width / 2 - 80,
-    width: 160,
-    height: 240,
+    width: 180,
+    height: 260,
     backgroundColor: "#77A5D6",
-    transform: [{ rotate: "-8deg" }], // Rotação mais suave
+    transform: [{ rotate: "-2deg" }],
   },
   textContainer: {
     alignItems: "center",
-    marginTop: 50,
+    marginTop: 60,
+    paddingHorizontal: 30,
   },
-  title: {
-    fontSize: 34,
-    fontWeight: "700", // iOS bold padrão
-    color: "#1C1C1E", // Quase preto
-    letterSpacing: 0.5,
+  titleMain: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: "#1D1D1F",
+    letterSpacing: -1.2,
+    marginBottom: 12,
   },
-  subtitle: {
-    fontSize: 17, // Tamanho de corpo padrão da Apple
-    color: "#8E8E93", // Cinza clássico de subtítulo da Apple
+  subtitleMain: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#86868B",
     textAlign: "center",
-    marginTop: 8,
-    lineHeight: 24,
+    lineHeight: 26,
+    letterSpacing: -0.2,
   },
-  swipeContainer: {
+  swipeOuterContainer: {
+    marginTop: 60,
+    width: SWIPE_CONTAINER_WIDTH,
+    height: KNOB_SIZE + 12,
+    borderRadius: (KNOB_SIZE + 12) / 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  swipeTrack: {
+    flex: 1,
+    borderRadius: (KNOB_SIZE + 12) / 2,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    width: "85%",
-    height: 64,
-    borderRadius: 32,
-    marginTop: 50,
-    paddingHorizontal: 8,
-    position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+    overflow: "hidden",
   },
-  swipeButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F2F2F7", // Botão sutil
+  swipeKnob: {
+    width: KNOB_SIZE,
+    height: KNOB_SIZE,
+    borderRadius: KNOB_SIZE / 2,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   textOverlay: {
     position: "absolute",
@@ -349,33 +409,96 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   swipeText: {
-    color: "#C7C7CC",
+    color: "#86868B",
     fontSize: 17,
-    fontWeight: "400",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginLeft: 20, // Compensa o knob visualmente
+  },
+  generatingWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  loadingCard: {
+    padding: 40,
+    borderRadius: 32,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
+    overflow: "hidden",
+  },
+  titleLoading: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1D1D1F",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  welcomeWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    paddingHorizontal: 24,
+  },
+  title: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#1D1D1F",
+    letterSpacing: -1,
+    marginBottom: 8,
+  },
+  subtitleHome: {
+    fontSize: 18,
+    color: "#86868B",
+    fontWeight: "500",
+    marginBottom: 40,
+  },
+  resultImageContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 50,
   },
   resultImage: {
-    width: 250,
-    height: 250,
-    borderRadius: 40,
-    marginTop: 30,
-    marginBottom: 20,
+    width: 280,
+    height: 280,
+    borderRadius: 140, // Redondo puro estilo contato do iOS
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 5,
+    borderWidth: 6,
+    borderColor: "rgba(255,255,255,0.8)",
+    zIndex: 2,
+  },
+  imageGlow: {
+    position: "absolute",
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: "#007AFF",
+    opacity: 0.15,
+    filter: "blur(40px)", // Se suportado, senão o shadow faz o trabalho
+    zIndex: 1,
   },
   appleButton: {
-    marginTop: 30,
-    backgroundColor: "#007AFF",
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    width: "80%",
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  appleButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 18,
     borderRadius: 100,
+    gap: 8,
   },
   appleButtonText: {
     color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 17,
+    fontWeight: "700",
+    fontSize: 18,
+    letterSpacing: 0.2,
   },
 });
