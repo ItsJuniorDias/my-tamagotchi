@@ -22,6 +22,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  LogBox,
 } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -29,15 +30,16 @@ import Animated, {
 } from "react-native-reanimated";
 import * as THREE from "three";
 import * as RNIap from "react-native-iap"; // Added Apple IAP
+import * as Notifications from "expo-notifications"; // Novo: Importação das notificações
 
 import Text from "@/components/text";
 
 const { width, height } = Dimensions.get("window");
-const STORAGE_KEY = "@my_tamagotchi_data_v5"; // Updated key
+const STORAGE_KEY = "@my_tamagotchi_data_v5";
 const responsiveScaleFactor = Math.min(width / 390, 1.2);
 
 const MAX_STAMINA = 5;
-const STAMINA_RECHARGE_TIME = 30 * 60 * 1000; // 30 Minutes per 1 Action
+const STAMINA_RECHARGE_TIME = 30 * 60 * 1000; // 30 Minutos por 1 Ação
 
 const ANIMAL_EVOLUTION_ORDER = [
   "Duck",
@@ -50,12 +52,16 @@ const ANIMAL_EVOLUTION_ORDER = [
   "Horse",
   "Cat",
   "Tiger",
+  "BlackWolf",
+  "Demon",
+  "Spider",
+  "TRex",
+  "Dragon",
 ];
 
-// Product IDs in the Apple Store (App Store Connect)
 const itemSKUs = Platform.select({
   ios: ["com.tamagotchi.pacotebasico_500", "com.tamagotchi.bauestrelas_1500"],
-  android: [], // Add Google Play IDs here in the future
+  android: [],
 });
 
 const PET_MODELS = {
@@ -73,12 +79,34 @@ const PET_MODELS = {
   Cat: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772222873/Kitty_001_jq4gis.glb",
   Tiger:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772221921/Tiger_001_fzvav5.glb",
-
   Pinguin:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772239430/Pinguin_001_ze5aeg.glb",
+
+  BlackWolf:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288819/WolfBlack_n1btxc.glb",
+
+  Demon:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288795/Demon_lckgjx.glb",
+
+  Spider:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288806/Spider_c5xdx7.glb",
+
+  TRex: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288815/T-Rex_j3w0kk.glb",
+
+  Dragon:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772283735/Dragon_Rigged_xfawyw.glb",
   default:
     "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
 };
+
+// 1. Configuração do comportamento da notificação quando o app está aberto
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const LoadingHologram = () => {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -102,62 +130,61 @@ const LoadingHologram = () => {
 };
 
 const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
-  const url = PET_MODELS[type] || PET_MODELS.default;
+  const url = PET_MODELS[type] || PET_MODELS.Demon || PET_MODELS.default;
+
   const { scene, animations } = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
+
   const { actions, names } = useAnimations(animations, groupRef);
 
+  const [index, setIndex] = useState(0);
+
   useEffect(() => {
-    if (names.length > 0) {
-      const actionName = names[0];
-      const action = actions[actionName];
-      if (action) action.reset().fadeIn(0.5).play();
-      return () => {
-        if (action) action.fadeOut(0.5);
-      };
-    }
-  }, [actions, names]);
+    if (names.length === 0) return;
 
-  let baseScale = 0.05;
+    // 1. Pega a animação atual
+    const actionName = names[index];
+    const action = actions[actionName];
+
+    // 2. Toca a animação com um Crossfade suave
+    action?.reset().fadeIn(0.5).play();
+
+    // 3. Define um intervalo para trocar para a próxima animação
+    // Aqui trocamos a cada 5 segundos (5000ms)
+    const timeout = setTimeout(() => {
+      setIndex((prevIndex) => (prevIndex + 1) % names.length);
+    }, 5000);
+
+    // 4. Cleanup: faz o fadeOut da animação atual antes de trocar ou desmontar
+    return () => {
+      action?.fadeOut(0.5);
+      clearTimeout(timeout);
+    };
+  }, [index, actions, names]);
+
   let positionY = -0.2;
-  if (url === PET_MODELS.Stork || url === PET_MODELS.Flamingo) {
-    baseScale = 0.05;
-    positionY = -0.2;
-  }
-  if (url === PET_MODELS.Duck) {
-    baseScale = 2.5;
-    positionY = -0.2;
-  }
-  if (url === PET_MODELS.Horse) {
-    baseScale = 0.03;
-    positionY = -0.8;
-  }
-  if (url === PET_MODELS.Parrot) {
-    baseScale = 0.09;
-    positionY = -0.8;
-  }
-  if (url === PET_MODELS.Wolf) {
-    baseScale = 1.5;
-    positionY = -0.9;
-  }
-  if (url === PET_MODELS.Fox) {
-    baseScale = 0.05;
-    positionY = -0.9;
-  }
-  if (url === PET_MODELS.Cat) {
-    baseScale = 15;
-    positionY = -0.9;
-  }
-  if (url === PET_MODELS.Tiger) {
-    baseScale = 3.5;
-    positionY = -0.9;
-  }
-  if (url === PET_MODELS.Pinguin) {
-    baseScale = 3.5;
-    positionY = -0.9;
-  }
 
-  const finalScale = baseScale * responsiveScaleFactor;
+  const config = {
+    [PET_MODELS.Duck]: { scale: 2.5, positionY: -0.2 },
+    [PET_MODELS.Flamingo]: { scale: 0.05, positionY: -0.2 },
+    [PET_MODELS.Stork]: { scale: 0.05, positionY: -0.2 },
+    [PET_MODELS.Horse]: { scale: 0.03, positionY: -0.8 },
+    [PET_MODELS.Parrot]: { scale: 0.09, positionY: -0.8 },
+    [PET_MODELS.Wolf]: { scale: 1.5, positionY: -0.9 },
+    [PET_MODELS.Fox]: { scale: 0.05, positionY: -0.9 },
+    [PET_MODELS.Cat]: { scale: 15, positionY: -0.9 },
+    [PET_MODELS.Tiger]: { scale: 3.5, positionY: -0.9 },
+    [PET_MODELS.Pinguin]: { scale: 3.5, positionY: -0.9 },
+    [PET_MODELS.Spider]: { scale: 1.2, positionY: -0.9 },
+    [PET_MODELS.Demon]: { scale: 1.5, positionY: -0.9 },
+    [PET_MODELS.BlackWolf]: { scale: 4.5, positionY: -0.9 },
+    [PET_MODELS.TRex]: { scale: 0.3, positionY: -0.9 },
+    [PET_MODELS.Dragon]: { scale: 0.7, positionY: -0.9 },
+  };
+
+  const currentConfig = config[url] || { scale: 0.05, positionY: -0.2 };
+
+  const finalScale = currentConfig.scale * responsiveScaleFactor;
 
   useFrame(() => {
     if (groupRef.current) {
@@ -171,10 +198,10 @@ const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
         rotationX.current,
         0.1,
       );
+
       const currentScale = groupRef.current.scale.x;
-      const targetScale = scaleMultiplier.current;
       groupRef.current.scale.setScalar(
-        THREE.MathUtils.lerp(currentScale, targetScale, 0.1),
+        THREE.MathUtils.lerp(currentScale, scaleMultiplier.current, 0.1),
       );
     }
   });
@@ -227,7 +254,7 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [stamina, setStamina] = useState(MAX_STAMINA);
   const [isStoreVisible, setIsStoreVisible] = useState(false);
-  const [products, setProducts] = useState([]); // Apple Store Products
+  const [products, setProducts] = useState([]);
 
   const [tamagotchi, setTamagotchi] = useState({
     type: ANIMAL_EVOLUTION_ORDER[0],
@@ -240,7 +267,57 @@ export default function HomeScreen() {
   const startRotationY = useRef(0);
   const startRotationX = useRef(0);
 
-  // 1. Apple IAP (In-App Purchases) Setup
+  // 2. Pedir permissão para Notificações ao iniciar
+  useEffect(() => {
+    async function requestPermissions() {
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== "granted") {
+        console.log("Notification permission denied!");
+        return;
+      }
+    }
+    requestPermissions();
+  }, []);
+
+  // 3. Sistema de Agendamento Dinâmico de Notificação
+  useEffect(() => {
+    const scheduleStaminaNotification = async () => {
+      // Limpar notificações antigas para evitar spam se o usuário entrar e sair do app rápido
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      if (stamina < MAX_STAMINA) {
+        // Calcula o tempo exato em segundos até atingir o MAX_STAMINA
+        const missingStamina = MAX_STAMINA - stamina;
+        const timeToFullSeconds =
+          (missingStamina * STAMINA_RECHARGE_TIME) / 1000;
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Energy full! ⚡",
+            body: `${tamagotchi?.name || "Your pet"} has rested and has ${MAX_STAMINA} actions available. Come play!`,
+            sound: true,
+          },
+          trigger: {
+            type: "timeInterval",
+            channelId: "stamina-recharge",
+            seconds: timeToFullSeconds,
+            repeats: false,
+          },
+        });
+      }
+    };
+
+    scheduleStaminaNotification();
+  }, [stamina, tamagotchi?.name]);
+
   useEffect(() => {
     let purchaseUpdateSubscription;
     let purchaseErrorSubscription;
@@ -248,6 +325,7 @@ export default function HomeScreen() {
     const initIAP = async () => {
       try {
         await RNIap.initConnection();
+
         if (Platform.OS === "ios") {
           const items = await RNIap.getProducts({ skus: itemSKUs });
           setProducts(items);
@@ -259,10 +337,12 @@ export default function HomeScreen() {
 
     initIAP();
 
-    // Listens when the purchase is approved by FaceID
     purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
       async (purchase) => {
+        console.log("Purchase updated:", purchase);
+
         const receipt = purchase.transactionReceipt;
+
         if (receipt) {
           try {
             if (purchase.productId === "com.seujogo.pacotebasico_500") {
@@ -296,7 +376,6 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // 2. Load Data and Calculate Offline Time
   useEffect(() => {
     const getAsyncStorage = async () => {
       try {
@@ -335,7 +414,6 @@ export default function HomeScreen() {
     getAsyncStorage();
   }, []);
 
-  // 3. Auto Save Data
   useEffect(() => {
     const saveData = async () => {
       try {
@@ -357,7 +435,6 @@ export default function HomeScreen() {
     saveData();
   }, [tamagotchi, hunger, happiness, energy, xp, coins, stamina]);
 
-  // 4. Active Stamina Recharge System
   useEffect(() => {
     const interval = setInterval(() => {
       setStamina((prev) => {
@@ -369,7 +446,6 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // 5. Level Up System
   useEffect(() => {
     if (xp >= 100) {
       if (tamagotchi.level >= 7) {
@@ -397,7 +473,6 @@ export default function HomeScreen() {
     }
   }, [xp]);
 
-  // 6. Actions
   const handleAction = (type) => {
     const actionConfig = {
       feed: { staminaCost: 1, coinCost: 10, hungerGained: 15, xpGained: 5 },
@@ -448,7 +523,6 @@ export default function HomeScreen() {
     }
   };
 
-  // 7. Store Functions
   const handlePurchase = async (sku) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -496,6 +570,7 @@ export default function HomeScreen() {
   ).current;
 
   const hour = new Date().getHours();
+
   const greeting =
     hour < 12
       ? "Good morning,"
@@ -596,10 +671,27 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.petArea} {...panResponder.panHandlers}>
-        <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
+        <Canvas
+          camera={{ position: [0, 0, 10], fov: 60 }}
+          onCreated={(state) => {
+            const _gl = state.gl.getContext();
+            const pixelStorei = _gl.pixelStorei.bind(_gl);
+
+            _gl.pixelStorei = function (...args) {
+              const [parameter] = args;
+              switch (parameter) {
+                case _gl.UNPACK_FLIP_Y_WEBGL:
+                  return pixelStorei(...args);
+              }
+            };
+          }}
+        >
           <ambientLight intensity={1} />
+
           <directionalLight position={[5, 10, 5]} intensity={2} />
+
           <Environment preset="city" />
+
           <Suspense fallback={<LoadingHologram />}>
             <PremiumPet3D
               type={tamagotchi?.type}
@@ -608,6 +700,7 @@ export default function HomeScreen() {
               scaleMultiplier={useRef(1)}
             />
           </Suspense>
+
           <ContactShadows
             position={[0, -1.8, 0]}
             opacity={0.2}

@@ -86,15 +86,21 @@ export default function App() {
       });
 
       const animals = [
+        "Duck",
         "Flamingo",
         "Parrot",
-        "Horse",
         "Stork",
-        "Duck",
-        "Wolf",
         "Fox",
+        "Pinguin",
+        "Wolf",
+        "Horse",
         "Cat",
         "Tiger",
+        "BlackWolf",
+        "Demon",
+        "Spider",
+        "TRex",
+        "Dragon",
       ];
 
       const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
@@ -198,49 +204,62 @@ export default function App() {
   if (showHome) {
     return (
       <View style={[styles.container, styles.centerContainer]}>
+        {/* Gradiente sutil no fundo para o BlurView ter o que distorcer/desfocar */}
         <LinearGradient
-          colors={["#E8E8ED", "#F2F2F7", "#FFFFFF"]}
+          colors={["#EAEAF2", "#F2F2F7", "#D1D1D6"]}
           style={StyleSheet.absoluteFill}
         />
+
         {isGenerating ? (
           <View style={styles.generatingWrapper}>
-            <BlurView intensity={80} tint="light" style={styles.loadingCard}>
+            {/* Tint "light" com intensidade alta reflete melhor o Material do iOS moderno */}
+            <BlurView intensity={80} tint="light" style={styles.glassCard}>
               <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.titleLoading}>Incubating...</Text>
-              <Text style={styles.subtitle}>
-                Using Apple Intelligence to create your new friend
+              <Text style={styles.titleLoading}>Incubating</Text>
+              <Text style={styles.subtitleLoading}>
+                Using Apple Intelligence to create your new friend...
               </Text>
             </BlurView>
           </View>
         ) : (
           <View style={styles.welcomeWrapper}>
-            <Text style={styles.title}>Welcome Home</Text>
-            <Text style={styles.subtitleHome}>
-              Say hello to your {tamagotchi?.type || "friend"}.
-            </Text>
-
-            {tamagotchi?.url && (
-              <View style={styles.resultImageContainer}>
-                <Image
-                  source={{ uri: tamagotchi.url }}
-                  style={styles.resultImage}
-                />
-                <View style={styles.imageGlow} />
+            {/* Container principal envelopado em vidro (Widget iOS Style) */}
+            <BlurView
+              intensity={75}
+              tint="light"
+              style={styles.glassProfileCard}
+            >
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.title}>Welcome Home</Text>
+                <Text style={styles.subtitleHome}>
+                  Say hello to your {tamagotchi?.type || "friend"}.
+                </Text>
               </View>
-            )}
+
+              {tamagotchi?.url && (
+                <View style={styles.resultImageContainer}>
+                  <View style={styles.iosShadow}>
+                    <Image
+                      source={{ uri: tamagotchi.url }}
+                      style={styles.resultImage}
+                    />
+                  </View>
+                </View>
+              )}
+            </BlurView>
 
             <TouchableOpacity
               style={styles.appleButton}
               activeOpacity={0.8}
               onPress={() => router.push("/(home)")}
             >
-              <LinearGradient
-                colors={["#007AFF", "#0056B3"]}
-                style={styles.appleButtonGradient}
-              >
-                <Text style={styles.appleButtonText}>Start Journey</Text>
-                <Feather name="chevron-right" size={20} color="#FFF" />
-              </LinearGradient>
+              <Text style={styles.appleButtonText}>Start Journey</Text>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color="#FFFFFF"
+                style={{ marginTop: 1 }}
+              />
             </TouchableOpacity>
           </View>
         )}
@@ -484,21 +503,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginBottom: 40,
   },
-  resultImageContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 50,
-  },
-  resultImage: {
-    width: 280,
-    height: 280,
-    borderRadius: 140, // Pure round, iOS contact style
-    backgroundColor: "#FFFFFF",
-    borderWidth: 6,
-    borderColor: "rgba(255,255,255,0.8)",
-    zIndex: 2,
-  },
   imageGlow: {
     position: "absolute",
     width: 240,
@@ -509,14 +513,6 @@ const styles = StyleSheet.create({
     filter: "blur(40px)", // If supported, otherwise the shadow does the job
     zIndex: 1,
   },
-  appleButton: {
-    width: "80%",
-    shadowColor: "#007AFF",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 8,
-  },
   appleButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
@@ -525,10 +521,74 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     gap: 8,
   },
+  appleButton: {
+    backgroundColor: "#007AFF", // Azul nativo do iOS
+    borderRadius: 14, // Padrão de botões modernos da Apple
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    width: "85%",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   appleButtonText: {
     color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 18,
-    letterSpacing: 0.2,
+    fontSize: 17,
+    fontWeight: "600", // Semibold
+    letterSpacing: -0.4,
+    marginRight: 6,
+  },
+
+  // Estilos do Glassmorphism
+  glassCard: {
+    padding: 40,
+    borderRadius: 32,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.6)", // O segredo da borda do vidro da Apple
+    overflow: "hidden",
+  },
+  glassProfileCard: {
+    paddingTop: 40,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderRadius: 40,
+    alignItems: "center",
+    width: "100%",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.6)",
+    overflow: "hidden",
+    marginBottom: 40,
+  },
+  subtitleLoading: {
+    fontSize: 15,
+    color: "#86868B",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  // Refinamentos nos elementos internos
+  headerTextContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  resultImageContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iosShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  resultImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 6,
+    borderColor: "rgba(255,255,255,0.8)",
   },
 });

@@ -1,4 +1,6 @@
 PODS:
+  - EXApplication (55.0.8):
+    - ExpoModulesCore
   - EXConstants (18.0.13):
     - ExpoModulesCore
   - Expo (54.0.33):
@@ -78,6 +80,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - ExpoNotifications (55.0.10):
+    - ExpoModulesCore
   - ExpoSplashScreen (31.0.13):
     - ExpoModulesCore
   - ExpoSymbols (1.0.8):
@@ -2104,6 +2108,7 @@ PODS:
   - Yoga (0.0.0)
 
 DEPENDENCIES:
+  - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
@@ -2118,6 +2123,7 @@ DEPENDENCIES:
   - ExpoLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
+  - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
@@ -2211,6 +2217,8 @@ SPEC REPOS:
     - SDWebImageWebPCoder
 
 EXTERNAL SOURCES:
+  EXApplication:
+    :path: "../node_modules/expo-application/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
   Expo:
@@ -2239,6 +2247,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-linking/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
+  ExpoNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   ExpoSplashScreen:
     :path: "../node_modules/expo-splash-screen/ios"
   ExpoSymbols:
@@ -2400,6 +2410,7 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  EXApplication: b86f81225a9cd817cfe86a79655b9829f12629db
   EXConstants: fce59a631a06c4151602843667f7cfe35f81e271
   Expo: aadbcc8c6c14ff3105a9154f1683cb1424ff0d2a
   ExpoAsset: f867e55ceb428aab99e1e8c082b5aee7c159ea18
@@ -2414,6 +2425,7 @@ SPEC CHECKSUMS:
   ExpoLinearGradient: 809102bdb979f590083af49f7fa4805cd931bd58
   ExpoLinking: 8f0aaf69aa56f832913030503b6263dc6f647f37
   ExpoModulesCore: f3da4f1ab5a8375d0beafab763739dbee8446583
+  ExpoNotifications: fa5cf77a46c8ea6bfc93bdbad9805c4f8d8a81fb
   ExpoSplashScreen: bc3cffefca2716e5f22350ca109badd7e50ec14d
   ExpoSymbols: 349ee2b4d7d5ff3ea8436467914f8a67635aa354
   ExpoSystemUI: 2ad325f361a2fcd96a464e8574e19935c461c9cc
