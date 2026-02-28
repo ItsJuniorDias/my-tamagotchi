@@ -28,16 +28,16 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as THREE from "three";
-import * as RNIap from "react-native-iap"; // Adicionado IAP da Apple
+import * as RNIap from "react-native-iap"; // Added Apple IAP
 
 import Text from "@/components/text";
 
 const { width, height } = Dimensions.get("window");
-const STORAGE_KEY = "@my_tamagotchi_data_v5"; // Chave atualizada
+const STORAGE_KEY = "@my_tamagotchi_data_v5"; // Updated key
 const responsiveScaleFactor = Math.min(width / 390, 1.2);
 
 const MAX_STAMINA = 5;
-const STAMINA_RECHARGE_TIME = 30 * 60 * 1000; // 30 Minutos por 1 Ação
+const STAMINA_RECHARGE_TIME = 30 * 60 * 1000; // 30 Minutes per 1 Action
 
 const ANIMAL_EVOLUTION_ORDER = [
   "Duck",
@@ -45,16 +45,17 @@ const ANIMAL_EVOLUTION_ORDER = [
   "Parrot",
   "Stork",
   "Fox",
+  "Pinguin",
   "Wolf",
   "Horse",
   "Cat",
   "Tiger",
 ];
 
-// IDs dos produtos na Apple Store (App Store Connect)
+// Product IDs in the Apple Store (App Store Connect)
 const itemSKUs = Platform.select({
   ios: ["com.tamagotchi.pacotebasico_500", "com.tamagotchi.bauestrelas_1500"],
-  android: [], // Adicione os IDs do Google Play aqui no futuro
+  android: [], // Add Google Play IDs here in the future
 });
 
 const PET_MODELS = {
@@ -72,6 +73,9 @@ const PET_MODELS = {
   Cat: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772222873/Kitty_001_jq4gis.glb",
   Tiger:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772221921/Tiger_001_fzvav5.glb",
+
+  Pinguin:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772239430/Pinguin_001_ze5aeg.glb",
   default:
     "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
 };
@@ -148,6 +152,10 @@ const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
     baseScale = 3.5;
     positionY = -0.9;
   }
+  if (url === PET_MODELS.Pinguin) {
+    baseScale = 3.5;
+    positionY = -0.9;
+  }
 
   const finalScale = baseScale * responsiveScaleFactor;
 
@@ -219,7 +227,7 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [stamina, setStamina] = useState(MAX_STAMINA);
   const [isStoreVisible, setIsStoreVisible] = useState(false);
-  const [products, setProducts] = useState([]); // Produtos da Apple Store
+  const [products, setProducts] = useState([]); // Apple Store Products
 
   const [tamagotchi, setTamagotchi] = useState({
     type: ANIMAL_EVOLUTION_ORDER[0],
@@ -232,7 +240,7 @@ export default function HomeScreen() {
   const startRotationY = useRef(0);
   const startRotationX = useRef(0);
 
-  // 1. Configuração IAP (In-App Purchases) da Apple
+  // 1. Apple IAP (In-App Purchases) Setup
   useEffect(() => {
     let purchaseUpdateSubscription;
     let purchaseErrorSubscription;
@@ -245,13 +253,13 @@ export default function HomeScreen() {
           setProducts(items);
         }
       } catch (err) {
-        console.warn("Erro ao conectar na loja:", err.message);
+        console.warn("Error connecting to the store:", err.message);
       }
     };
 
     initIAP();
 
-    // Escuta quando a compra é aprovada pelo FaceID
+    // Listens when the purchase is approved by FaceID
     purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
       async (purchase) => {
         const receipt = purchase.transactionReceipt;
@@ -265,22 +273,19 @@ export default function HomeScreen() {
 
             await RNIap.finishTransaction({ purchase, isConsumable: true });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert(
-              "Sucesso!",
-              "As estrelas foram adicionadas à sua conta.",
-            );
+            Alert.alert("Success!", "Stars have been added to your account.");
             setIsStoreVisible(false);
           } catch (error) {
-            console.error("Erro ao finalizar compra:", error);
+            console.error("Error finishing purchase:", error);
           }
         }
       },
     );
 
     purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
-      console.log("Erro na compra", error);
+      console.log("Purchase error", error);
       if (error.code !== "E_USER_CANCELLED") {
-        Alert.alert("Erro", "A compra falhou. Tente novamente.");
+        Alert.alert("Error", "Purchase failed. Please try again.");
       }
     });
 
@@ -291,7 +296,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // 2. Carregar Dados e Calcular Tempo Offline
+  // 2. Load Data and Calculate Offline Time
   useEffect(() => {
     const getAsyncStorage = async () => {
       try {
@@ -324,13 +329,13 @@ export default function HomeScreen() {
           }
         }
       } catch (error) {
-        console.error("Erro ao carregar dados", error);
+        console.error("Error loading data", error);
       }
     };
     getAsyncStorage();
   }, []);
 
-  // 3. Salvar Dados Automaticamente
+  // 3. Auto Save Data
   useEffect(() => {
     const saveData = async () => {
       try {
@@ -346,13 +351,13 @@ export default function HomeScreen() {
         };
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
       } catch (error) {
-        console.error("Erro ao salvar dados", error);
+        console.error("Error saving data", error);
       }
     };
     saveData();
   }, [tamagotchi, hunger, happiness, energy, xp, coins, stamina]);
 
-  // 4. Sistema de Recarga de Stamina Ativo
+  // 4. Active Stamina Recharge System
   useEffect(() => {
     const interval = setInterval(() => {
       setStamina((prev) => {
@@ -364,7 +369,7 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // 5. Sistema de Level Up
+  // 5. Level Up System
   useEffect(() => {
     if (xp >= 100) {
       if (tamagotchi.level >= 7) {
@@ -384,15 +389,15 @@ export default function HomeScreen() {
       setCoins((prev) => prev + 100);
 
       Alert.alert(
-        "🎉 Evolução!",
-        `Seu pet evoluiu para o nível ${nextLevel} e se transformou em um(a) ${nextAnimal}!`,
+        "🎉 Evolution!",
+        `Your pet evolved to level ${nextLevel} and transformed into a ${nextAnimal}!`,
       );
       rotationY.current = 0;
       rotationX.current = 0;
     }
   }, [xp]);
 
-  // 6. Ações
+  // 6. Actions
   const handleAction = (type) => {
     const actionConfig = {
       feed: { staminaCost: 1, coinCost: 10, hungerGained: 15, xpGained: 5 },
@@ -417,8 +422,8 @@ export default function HomeScreen() {
     if (coins < action.coinCost) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Sem Estrelas ⭐",
-        "Você precisa comprar mais moedas na loja!",
+        "Out of Stars ⭐",
+        "You need to buy more stars in the store!",
       );
       setIsStoreVisible(true);
       return;
@@ -443,16 +448,16 @@ export default function HomeScreen() {
     }
   };
 
-  // 7. Funções da Loja
+  // 7. Store Functions
   const handlePurchase = async (sku) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await RNIap.requestPurchase({ sku });
     } catch (err) {
-      console.warn("Erro ao pedir compra:", err.message);
+      console.warn("Error requesting purchase:", err.message);
       Alert.alert(
-        "Aviso",
-        "Não foi possível iniciar a compra agora. Verifique sua conexão ou configuração da loja.",
+        "Warning",
+        "Could not start the purchase right now. Check your connection or store configuration.",
       );
     }
   };
@@ -461,15 +466,12 @@ export default function HomeScreen() {
     const STAMINA_COST = 100;
 
     if (stamina >= MAX_STAMINA) {
-      Alert.alert("Energia Cheia", "Você já está com a energia no máximo!");
+      Alert.alert("Full Energy", "Your energy is already at maximum!");
       return;
     }
     if (coins < STAMINA_COST) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Saldo Insuficiente",
-        "Você precisa de mais estrelas para comprar energia.",
-      );
+      Alert.alert("Insufficient Balance", "You need more stars to buy energy.");
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -495,7 +497,11 @@ export default function HomeScreen() {
 
   const hour = new Date().getHours();
   const greeting =
-    hour < 12 ? "Bom dia," : hour < 18 ? "Boa tarde," : "Boa noite,";
+    hour < 12
+      ? "Good morning,"
+      : hour < 18
+        ? "Good afternoon,"
+        : "Good evening,";
 
   const animatedXpStyle = useAnimatedStyle(() => ({
     width: withTiming(`${Math.min(100, Math.max(0, xp))}%`, { duration: 800 }),
@@ -533,7 +539,7 @@ export default function HomeScreen() {
             style={styles.staminaContainer}
             onPress={() => setIsStoreVisible(true)}
           >
-            <Text style={styles.staminaLabel}>AÇÕES:</Text>
+            <Text style={styles.staminaLabel}>ACTIONS:</Text>
             {[...Array(MAX_STAMINA)].map((_, i) => (
               <MaterialCommunityIcons
                 key={i}
@@ -570,19 +576,19 @@ export default function HomeScreen() {
 
       <View style={styles.statusGrid}>
         <StatusPill
-          label="Fome"
+          label="Hunger"
           value={hunger}
           color="#FF3B30"
           icon="food-apple"
         />
         <StatusPill
-          label="Humor"
+          label="Mood"
           value={happiness}
           color="#FF9500"
           icon="emoticon-happy"
         />
         <StatusPill
-          label="Energia"
+          label="Energy"
           value={energy}
           color="#34C759"
           icon="lightning-bolt"
@@ -670,18 +676,18 @@ export default function HomeScreen() {
             >
               <MaterialCommunityIcons name="bed" size={24} color="#007AFF" />
             </View>
-            <Text style={styles.dockLabel}>Grátis</Text>
+            <Text style={styles.dockLabel}>Free</Text>
           </TouchableOpacity>
         </BlurView>
       </View>
 
-      {/* MODAL DA LOJA */}
+      {/* STORE MODAL */}
       <Modal visible={isStoreVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <BlurView intensity={90} tint="light" style={styles.storeContainer}>
             <View style={styles.storeHeader}>
               <Text style={styles.storeTitle} weight="bold">
-                Loja do Tutor
+                Pet Store
               </Text>
               <TouchableOpacity
                 onPress={() => setIsStoreVisible(false)}
@@ -706,8 +712,10 @@ export default function HomeScreen() {
                   />
                 </View>
                 <View style={styles.storeItemInfo}>
-                  <Text style={styles.storeItemTitle}>Recarregar Energia</Text>
-                  <Text style={styles.storeItemDesc}>Enche suas 5 ações</Text>
+                  <Text style={styles.storeItemTitle}>Recharge Energy</Text>
+                  <Text style={styles.storeItemDesc}>
+                    Refills your 5 actions
+                  </Text>
                 </View>
                 <View style={styles.buyButton}>
                   <Text style={styles.buyButtonText}>100 ⭐</Text>
@@ -733,8 +741,8 @@ export default function HomeScreen() {
                   />
                 </View>
                 <View style={styles.storeItemInfo}>
-                  <Text style={styles.storeItemTitle}>Pacote Básico</Text>
-                  <Text style={styles.storeItemDesc}>+500 Estrelas</Text>
+                  <Text style={styles.storeItemTitle}>Basic Package</Text>
+                  <Text style={styles.storeItemDesc}>+500 Stars</Text>
                 </View>
                 <View
                   style={[styles.buyButton, { backgroundColor: "#007AFF" }]}
@@ -764,8 +772,8 @@ export default function HomeScreen() {
                   />
                 </View>
                 <View style={styles.storeItemInfo}>
-                  <Text style={styles.storeItemTitle}>Baú de Estrelas</Text>
-                  <Text style={styles.storeItemDesc}>+1500 Estrelas</Text>
+                  <Text style={styles.storeItemTitle}>Star Chest</Text>
+                  <Text style={styles.storeItemDesc}>+1500 Stars</Text>
                 </View>
                 <View
                   style={[styles.buyButton, { backgroundColor: "#007AFF" }]}

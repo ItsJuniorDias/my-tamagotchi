@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BlurView } from "expo-blur"; // Novo: Para efeito de vidro
-import { LinearGradient } from "expo-linear-gradient"; // Novo: Para fundo premium
+import { BlurView } from "expo-blur"; // New: For glass effect
+import { LinearGradient } from "expo-linear-gradient"; // New: For premium background
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -28,18 +28,20 @@ import Animated, {
 import "react-native-url-polyfill/auto";
 
 const { width } = Dimensions.get("window");
-// Ajuste fino da área de swipe para caber perfeitamente no novo design
+// Fine-tuning the swipe area to perfectly fit the new design
 const SWIPE_CONTAINER_WIDTH = width * 0.85;
 const KNOB_SIZE = 56;
-const SWIPE_RANGE = SWIPE_CONTAINER_WIDTH - KNOB_SIZE - 12; // 12 é o padding
-const STORAGE_KEY = "@my_tamagotchi_data";
+const SWIPE_RANGE = SWIPE_CONTAINER_WIDTH - KNOB_SIZE - 12; // 12 is the padding
+const STORAGE_KEY = "@my_tamagotchi_data"; // Make sure this matches your other screen if sharing data
 
-const genAI = new GoogleGenerativeAI("AIzaSyBs_yliDm_I_gF7-dpRogtEDPgYHOyIjGI");
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GOOGLE_API_KEY);
 
 export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [tamagotchi, setTamagotchi] = useState(null);
   const [showHome, setShowHome] = useState(false);
+
+  console.log(tamagotchi, "current pet in state");
 
   const router = useRouter();
   const translateX = useSharedValue(0);
@@ -52,7 +54,13 @@ export default function App() {
     try {
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData !== null) {
-        setTamagotchi(JSON.parse(savedData));
+        const parsedData = JSON.parse(savedData);
+        // Accommodates both direct object or nested tamagotchi object from other screens
+        const currentPet = parsedData.tamagotchi
+          ? parsedData.tamagotchi
+          : parsedData;
+
+        setTamagotchi(currentPet);
         setShowHome(true);
       }
     } catch (e) {
@@ -62,6 +70,7 @@ export default function App() {
 
   const saveTamagotchi = async (data) => {
     try {
+      // If merging with existing data, you might want to fetch first, but for now we overwrite/save
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.error("Failed to save tamagotchi", e);
@@ -70,6 +79,7 @@ export default function App() {
 
   const generateTamagotchiIcon = async () => {
     setIsGenerating(true);
+
     try {
       const geminiImage = genAI.getGenerativeModel({
         model: "gemini-2.5-flash-image",
@@ -83,7 +93,8 @@ export default function App() {
         "Duck",
         "Wolf",
         "Fox",
-        "Stag",
+        "Cat",
+        "Tiger",
       ];
 
       const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
@@ -100,12 +111,24 @@ export default function App() {
           (p) => p.inlineData,
         );
 
+      console.log(storyImagePart, "Gemini Image Part");
+
       if (storyImagePart) {
         const permanentUrl = await uploadGeminiToCloudinary(
           storyImagePart?.inlineData?.data,
         );
-        const newPet = { url: permanentUrl, type: randomAnimal };
+
+        console.log(permanentUrl, "Cloudinary URL");
+
+        const newPet = {
+          url: permanentUrl,
+          type: randomAnimal,
+          level: 1,
+          name: "Bubbles",
+        };
+
         setTamagotchi(newPet);
+
         await saveTamagotchi(newPet);
       }
     } catch (error) {
@@ -115,10 +138,12 @@ export default function App() {
     }
   };
 
-  const uploadGeminiToCloudinary = async (base64String) => {
+  const uploadGeminiToCloudinary = async (base64String: string) => {
     const CLOUD_NAME = "dqvujibkn";
     const UPLOAD_PRESET = "ai-generated-images";
+
     const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+
     const formData = new FormData();
     formData.append("file", `data:image/png;base64,${base64String}`);
     formData.append("upload_preset", UPLOAD_PRESET);
@@ -133,8 +158,13 @@ export default function App() {
   };
 
   const handleStart = () => {
-    setShowHome(true);
-    generateTamagotchiIcon();
+    // Only generate a new one if we don't already have one loaded
+    if (!tamagotchi) {
+      setShowHome(true);
+      generateTamagotchiIcon();
+    } else {
+      setShowHome(true);
+    }
   };
 
   const gesture = Gesture.Pan()
@@ -161,10 +191,10 @@ export default function App() {
 
   const animatedTextStyle = useAnimatedStyle(() => ({
     opacity: 1 - translateX.value / (SWIPE_RANGE / 2),
-    transform: [{ translateX: translateX.value * 0.1 }], // Leve parallax no texto
+    transform: [{ translateX: translateX.value * 0.1 }], // Slight parallax on the text
   }));
 
-  // Renderização condicional para as telas "Home/Gerando"
+  // Conditional rendering for the "Home/Generating" screens
   if (showHome) {
     return (
       <View style={[styles.container, styles.centerContainer]}>
@@ -186,7 +216,7 @@ export default function App() {
           <View style={styles.welcomeWrapper}>
             <Text style={styles.title}>Welcome Home</Text>
             <Text style={styles.subtitleHome}>
-              Say hello to your new {tamagotchi?.type}.
+              Say hello to your {tamagotchi?.type || "friend"}.
             </Text>
 
             {tamagotchi?.url && (
@@ -262,7 +292,7 @@ export default function App() {
           </Text>
         </View>
 
-        {/* Swipe Track com BlurView para efeito Dynamic Island/iOS */}
+        {/* Swipe Track with BlurView for Dynamic Island/iOS effect */}
         <View style={styles.swipeOuterContainer}>
           <BlurView intensity={60} tint="light" style={styles.swipeTrack}>
             <Animated.View style={[styles.textOverlay, animatedTextStyle]}>
@@ -413,7 +443,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: 0.5,
-    marginLeft: 20, // Compensa o knob visualmente
+    marginLeft: 20, // Visually compensates for the knob
   },
   generatingWrapper: {
     alignItems: "center",
@@ -463,7 +493,7 @@ const styles = StyleSheet.create({
   resultImage: {
     width: 280,
     height: 280,
-    borderRadius: 140, // Redondo puro estilo contato do iOS
+    borderRadius: 140, // Pure round, iOS contact style
     backgroundColor: "#FFFFFF",
     borderWidth: 6,
     borderColor: "rgba(255,255,255,0.8)",
@@ -476,7 +506,7 @@ const styles = StyleSheet.create({
     borderRadius: 120,
     backgroundColor: "#007AFF",
     opacity: 0.15,
-    filter: "blur(40px)", // Se suportado, senão o shadow faz o trabalho
+    filter: "blur(40px)", // If supported, otherwise the shadow does the job
     zIndex: 1,
   },
   appleButton: {
