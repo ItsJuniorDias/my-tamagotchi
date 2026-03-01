@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
@@ -10,6 +10,180 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 import { PET_MODELS, responsiveScaleFactor } from "../../constants/gameConfig";
+
+// --- EFEITO 1: BANHO (Bolhas subindo) ---
+const BathBubbles = ({ count = 25 }) => {
+  const groupRef = useRef(null);
+  const bubblesData = useMemo(() => {
+    return Array.from({ length: count }).map(() => ({
+      x: (Math.random() - 0.5) * 4,
+      y: Math.random() * -2 - 1.5,
+      z: (Math.random() - 0.5) * 4,
+      scale: Math.random() * 0.2 + 0.05,
+      speed: Math.random() * 2 + 1,
+      wobble: Math.random() * 3,
+    }));
+  }, [count]);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((bubble, i) => {
+      const data = bubblesData[i];
+      bubble.position.y += data.speed * delta;
+      bubble.position.x +=
+        Math.sin(state.clock.elapsedTime * data.wobble + i) * 0.01;
+      if (bubble.position.y > 4) {
+        bubble.position.y = -2;
+        bubble.position.x = (Math.random() - 0.5) * 4;
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {bubblesData.map((data, i) => (
+        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
+          <sphereGeometry args={[1, 16, 16]} />
+          <meshStandardMaterial
+            color="#A8E6CF"
+            transparent
+            opacity={0.6}
+            roughness={0.1}
+            metalness={0.1}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// --- EFEITO 2: COMER (Ração caindo) ---
+const EatParticles = ({ count = 15 }) => {
+  const groupRef = useRef(null);
+  const foodData = useMemo(() => {
+    return Array.from({ length: count }).map(() => ({
+      x: (Math.random() - 0.5) * 2,
+      y: Math.random() * 4 + 2, // Começam no alto
+      z: (Math.random() - 0.5) * 2,
+      scale: Math.random() * 0.1 + 0.05,
+      speed: Math.random() * 3 + 2,
+    }));
+  }, [count]);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((food, i) => {
+      const data = foodData[i];
+      food.position.y -= data.speed * delta; // Caem
+      food.rotation.x += delta * 2;
+      food.rotation.y += delta * 2;
+      // Reseta a posição quando chega no chão
+      if (food.position.y < -1) {
+        food.position.y = Math.random() * 2 + 3;
+        food.position.x = (Math.random() - 0.5) * 2;
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {foodData.map((data, i) => (
+        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#D2691E" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// --- EFEITO 3: BRINCAR (Confetes coloridos pulando) ---
+const PlayParticles = ({ count = 30 }) => {
+  const groupRef = useRef(null);
+  const colors = ["#FF5733", "#33FF57", "#3357FF", "#F3FF33", "#FF33F3"];
+  const playData = useMemo(() => {
+    return Array.from({ length: count }).map(() => ({
+      x: (Math.random() - 0.5) * 5,
+      y: (Math.random() - 0.5) * 5,
+      z: (Math.random() - 0.5) * 5,
+      scale: Math.random() * 0.1 + 0.05,
+      speedX: (Math.random() - 0.5) * 2,
+      speedY: (Math.random() - 0.5) * 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+  }, [count]);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((particle, i) => {
+      const data = playData[i];
+      particle.rotation.x += delta * 5;
+      particle.rotation.y += delta * 5;
+      particle.position.x += data.speedX * delta;
+      particle.position.y += data.speedY * delta;
+
+      // Mantém os confetes próximos ao pet
+      if (particle.position.distanceTo(new THREE.Vector3(0, 0, 0)) > 3) {
+        particle.position.set(0, 0, 0);
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {playData.map((data, i) => (
+        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial color={data.color} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+// --- EFEITO 4: DORMIR (Bolhas de sonho lentas) ---
+const SleepParticles = ({ count = 8 }) => {
+  const groupRef = useRef(null);
+  const sleepData = useMemo(() => {
+    return Array.from({ length: count }).map(() => ({
+      x: (Math.random() - 0.5) * 3,
+      y: Math.random() * 2,
+      z: (Math.random() - 0.5) * 3,
+      scale: Math.random() * 0.2 + 0.1,
+      speed: Math.random() * 0.5 + 0.2, // Muito lento
+    }));
+  }, [count]);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((bubble, i) => {
+      const data = sleepData[i];
+      bubble.position.y += data.speed * delta;
+      bubble.position.x += Math.sin(state.clock.elapsedTime + i) * 0.005;
+
+      // Efeito de "pulsar" respirando
+      const currentScale =
+        data.scale + Math.sin(state.clock.elapsedTime * 2 + i) * 0.05;
+      bubble.scale.set(currentScale, currentScale, currentScale);
+
+      if (bubble.position.y > 4) {
+        bubble.position.y = -1;
+        bubble.position.x = (Math.random() - 0.5) * 3;
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {sleepData.map((data, i) => (
+        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
+          <sphereGeometry args={[1, 16, 16]} />
+          <meshStandardMaterial color="#1E5BB7" transparent opacity={0.4} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
 
 const LoadingHologram = () => {
   const meshRef = useRef(null);
@@ -116,6 +290,10 @@ export default function Pet3DViewer({
   rotationY,
   rotationX,
   panHandlers,
+  isBathing = false,
+  isEating = false,
+  isPlaying = false,
+  isSleeping = false,
 }) {
   const scaleMultiplier = useRef(1);
 
@@ -133,9 +311,16 @@ export default function Pet3DViewer({
           };
         }}
       >
-        <ambientLight intensity={1} />
-        <directionalLight position={[5, 10, 5]} intensity={2} />
-        <Environment preset="city" />
+        {/* Controle dinâmico de luz: Apaga as luzes se estiver dormindo */}
+        <ambientLight intensity={isSleeping ? 0.2 : 1} />
+        <directionalLight
+          position={[5, 10, 5]}
+          intensity={isSleeping ? 0.3 : 2}
+        />
+
+        {/* Desativa o Environment da cidade se estiver dormindo para ficar mais escuro */}
+        {!isSleeping && <Environment preset="city" />}
+
         <Suspense fallback={<LoadingHologram />}>
           <PremiumPet3D
             type={type}
@@ -143,7 +328,14 @@ export default function Pet3DViewer({
             rotationX={rotationX}
             scaleMultiplier={scaleMultiplier}
           />
+
+          {/* Renderização Condicional das Animações */}
+          {isBathing && <BathBubbles />}
+          {isEating && <EatParticles />}
+          {isPlaying && <PlayParticles />}
+          {isSleeping && <SleepParticles />}
         </Suspense>
+
         <ContactShadows
           position={[0, -1.8, 0]}
           opacity={0.2}

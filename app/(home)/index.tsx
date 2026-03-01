@@ -64,11 +64,15 @@ export default function HomeScreen() {
     async function requestPermissions() {
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
+
       let finalStatus = existingStatus;
+
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
+
         finalStatus = status;
       }
+
       if (finalStatus !== "granted")
         console.log("Notification permission denied!");
     }
@@ -80,8 +84,10 @@ export default function HomeScreen() {
       await Notifications.cancelAllScheduledNotificationsAsync();
       if (stamina < MAX_STAMINA) {
         const missingStamina = MAX_STAMINA - stamina;
+
         const timeToFullSeconds =
           (missingStamina * STAMINA_RECHARGE_TIME) / 1000;
+
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Energy full! ⚡",
@@ -394,6 +400,7 @@ export default function HomeScreen() {
         rotationY={rotationY}
         rotationX={rotationX}
         panHandlers={panResponder.panHandlers}
+        isBathing={hygiene < 50}
       />
 
       <ActionDock onAction={handleAction} />
