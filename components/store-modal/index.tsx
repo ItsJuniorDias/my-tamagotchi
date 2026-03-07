@@ -10,8 +10,14 @@ export default function StoreModal({
   onBuyStamina,
   onPurchase,
   products,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onBuyStamina: () => void;
+  onPurchase: (sku: string) => void;
+  products: { productId: string; localizedPrice: string }[];
 }) {
-  const getPrice = (id, fallback) =>
+  const getPrice = (id: string, fallback: string) =>
     products.find((p) => p.productId === id)?.localizedPrice || fallback;
 
   return (
@@ -54,7 +60,7 @@ export default function StoreModal({
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("com.seujogo.pacotebasico_500")}
+              onPress={() => onPurchase("com.tamagotchi.pacotebasico_500")}
             >
               <View
                 style={[
@@ -74,14 +80,14 @@ export default function StoreModal({
               </View>
               <View style={[styles.buyButton, { backgroundColor: "#007AFF" }]}>
                 <Text style={[styles.buyButtonText, { color: "#FFF" }]}>
-                  {getPrice("com.seujogo.pacotebasico_500", "$4.99")}
+                  {getPrice("com.tamagotchi.pacotebasico_500", "$4.99")}
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("com.seujogo.bauestrelas_1500")}
+              onPress={() => onPurchase("com.tamagotchi.bauestrelas_1500")}
             >
               <View
                 style={[
@@ -101,7 +107,7 @@ export default function StoreModal({
               </View>
               <View style={[styles.buyButton, { backgroundColor: "#007AFF" }]}>
                 <Text style={[styles.buyButtonText, { color: "#FFF" }]}>
-                  {getPrice("com.seujogo.bauestrelas_1500", "$9.99")}
+                  {getPrice("com.tamagotchi.bauestrelas_1500", "$9.99")}
                 </Text>
               </View>
             </TouchableOpacity>

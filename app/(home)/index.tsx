@@ -362,15 +362,16 @@ export default function HomeScreen() {
     }
   };
 
-  const handlePurchase = async (sku) => {
+  const handlePurchase = async (sku: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       await RNIap.requestPurchase({
-        type: "iap",
         request: {
           apple: { sku: sku },
         },
+        type: "in-app",
+        useAlternativeBilling: false,
       });
     } catch (err) {
       Alert.alert("Warning", "Could not start the purchase right now.");
