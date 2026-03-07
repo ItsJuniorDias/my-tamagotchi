@@ -1,4 +1,4 @@
-package com.anonymous.mytamagotchi
+package com.alexandrejunior.mytamagotchi
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

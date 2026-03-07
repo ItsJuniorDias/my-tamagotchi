@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.mytamagotchi'
+    namespace 'com.alexandrejunior.mytamagotchi'
     defaultConfig {
-        applicationId 'com.anonymous.mytamagotchi'
+        applicationId 'com.alexandrejunior.mytamagotchi'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

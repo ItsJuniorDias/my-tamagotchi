@@ -29,11 +29,16 @@ import Pet3DViewer from "../../components/pet-3d";
 import ActionDock from "../../components/action-dock";
 import StoreModal from "../../components/store-modal";
 
+// Constante de decaimento dos status (60000ms = 1 minuto)
+const STAT_DECAY_INTERVAL = 60000;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -49,7 +54,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState([]);
 
   const [tamagotchi, setTamagotchi] = useState({
-    type: ANIMAL_EVOLUTION_ORDER[0],
+    type: ANIMAL_EVOLUTION_ORDER?.[0] || "DefaultPet",
     name: "Bubbles",
     level: 1,
   });
@@ -69,7 +74,6 @@ export default function HomeScreen() {
 
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
-
         finalStatus = status;
       }
 
@@ -82,9 +86,9 @@ export default function HomeScreen() {
   useEffect(() => {
     const scheduleStaminaNotification = async () => {
       await Notifications.cancelAllScheduledNotificationsAsync();
-      if (stamina < MAX_STAMINA) {
+      if (stamina < MAX_STAMINA && STAMINA_RECHARGE_TIME > 0) {
+        // Proteção de divisão por zero
         const missingStamina = MAX_STAMINA - stamina;
-
         const timeToFullSeconds =
           (missingStamina * STAMINA_RECHARGE_TIME) / 1000;
 
@@ -114,12 +118,14 @@ export default function HomeScreen() {
     const initIAP = async () => {
       try {
         await RNIap.initConnection();
-        if (Platform.OS === "ios") {
-          const items = await RNIap.getProducts({ skus: itemSKUs });
+        // Proteção: Garante que itemSKUs existe e não está vazio antes de chamar a API
+        if (Platform.OS === "ios" && itemSKUs && itemSKUs.length > 0) {
+          const items = await RNIap.fetchProducts({ skus: itemSKUs });
+
           setProducts(items);
         }
       } catch (err) {
-        console.warn("Error connecting to the store:", err.message);
+        console.warn("Error connecting to the store:", err?.message || err);
       }
     };
 
@@ -127,12 +133,12 @@ export default function HomeScreen() {
 
     purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
       async (purchase) => {
-        const receipt = purchase.transactionReceipt;
-        if (receipt) {
+        // Proteção: Garante que o objeto purchase e o receipt existem
+        if (purchase && purchase.transactionId && purchase.productId) {
           try {
-            if (purchase.productId === "com.seujogo.pacotebasico_500")
+            if (purchase.productId === "com.tamagotchi.pacotebasico_500")
               setCoins((prev) => prev + 500);
-            else if (purchase.productId === "com.seujogo.bauestrelas_1500")
+            else if (purchase.productId === "com.tamagotchi.bauestrelas_1500")
               setCoins((prev) => prev + 1500);
 
             await RNIap.finishTransaction({ purchase, isConsumable: true });
@@ -147,7 +153,7 @@ export default function HomeScreen() {
     );
 
     purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
-      if (error.code !== "E_USER_CANCELLED")
+      if (error && error.code !== RNIap.ErrorCode.UserCancelled)
         Alert.alert("Error", "Purchase failed. Please try again.");
     });
 
@@ -158,7 +164,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // --- AsyncStorage ---
+  // --- AsyncStorage: Carregamento e Decaimento Offline ---
   useEffect(() => {
     const getAsyncStorage = async () => {
       try {
@@ -166,26 +172,49 @@ export default function HomeScreen() {
         if (storedData) {
           const parsedData = JSON.parse(storedData);
           if (parsedData.tamagotchi) setTamagotchi(parsedData.tamagotchi);
-          if (parsedData.hunger !== undefined) setHunger(parsedData.hunger);
-          if (parsedData.happiness !== undefined)
-            setHappiness(parsedData.happiness);
-          if (parsedData.energy !== undefined) setEnergy(parsedData.energy);
-          if (parsedData.hygiene !== undefined) setHygiene(parsedData.hygiene);
           if (parsedData.xp !== undefined) setXp(parsedData.xp);
           if (parsedData.coins !== undefined) setCoins(parsedData.coins);
 
-          if (parsedData.stamina !== undefined) {
-            if (parsedData.lastSavedTime) {
-              const timePassed = Date.now() - parsedData.lastSavedTime;
-              const staminaToRecover = Math.floor(
-                timePassed / STAMINA_RECHARGE_TIME,
-              );
+          // Lógica de decaimento baseada no tempo offline
+          if (parsedData.lastSavedTime) {
+            const timePassed = Date.now() - parsedData.lastSavedTime;
+
+            // Proteção: Evita divisão por zero ou valores NaN
+            const decayTicks =
+              STAT_DECAY_INTERVAL > 0
+                ? Math.floor(timePassed / STAT_DECAY_INTERVAL)
+                : 0;
+
+            // Recuperação de Stamina
+            if (parsedData.stamina !== undefined) {
+              const staminaToRecover =
+                STAMINA_RECHARGE_TIME > 0
+                  ? Math.floor(timePassed / STAMINA_RECHARGE_TIME)
+                  : 0;
               setStamina(
                 Math.min(MAX_STAMINA, parsedData.stamina + staminaToRecover),
               );
-            } else {
-              setStamina(parsedData.stamina);
             }
+
+            // Aplica o decaimento garantindo que não fique menor que 0
+            if (parsedData.hunger !== undefined)
+              setHunger(Math.max(0, parsedData.hunger - decayTicks));
+            if (parsedData.happiness !== undefined)
+              setHappiness(Math.max(0, parsedData.happiness - decayTicks));
+            if (parsedData.energy !== undefined)
+              setEnergy(Math.max(0, parsedData.energy - decayTicks));
+            if (parsedData.hygiene !== undefined)
+              setHygiene(Math.max(0, parsedData.hygiene - decayTicks));
+          } else {
+            // Fallback se não tiver lastSavedTime
+            if (parsedData.hunger !== undefined) setHunger(parsedData.hunger);
+            if (parsedData.happiness !== undefined)
+              setHappiness(parsedData.happiness);
+            if (parsedData.energy !== undefined) setEnergy(parsedData.energy);
+            if (parsedData.hygiene !== undefined)
+              setHygiene(parsedData.hygiene);
+            if (parsedData.stamina !== undefined)
+              setStamina(parsedData.stamina);
           }
         }
       } catch (error) {
@@ -195,6 +224,7 @@ export default function HomeScreen() {
     getAsyncStorage();
   }, []);
 
+  // --- AsyncStorage: Salvamento ---
   useEffect(() => {
     const saveData = async () => {
       try {
@@ -217,11 +247,25 @@ export default function HomeScreen() {
     saveData();
   }, [tamagotchi, hunger, happiness, energy, hygiene, xp, coins, stamina]);
 
+  // --- Intervalos de Tempo Ativos ---
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Intervalo para recuperar Stamina do jogador
+    const staminaInterval = setInterval(() => {
       setStamina((prev) => (prev < MAX_STAMINA ? prev + 1 : prev));
-    }, STAMINA_RECHARGE_TIME);
-    return () => clearInterval(interval);
+    }, STAMINA_RECHARGE_TIME || 60000); // Fallback de segurança
+
+    // Intervalo para decaimento dos status do Pet
+    const statsInterval = setInterval(() => {
+      setHunger((prev) => Math.max(0, prev - 1));
+      setHappiness((prev) => Math.max(0, prev - 1));
+      setEnergy((prev) => Math.max(0, prev - 1));
+      setHygiene((prev) => Math.max(0, prev - 1));
+    }, STAT_DECAY_INTERVAL || 60000); // Fallback de segurança
+
+    return () => {
+      clearInterval(staminaInterval);
+      clearInterval(statsInterval);
+    };
   }, []);
 
   // --- Lógica de Evolução ---
@@ -233,7 +277,12 @@ export default function HomeScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const nextLevel = tamagotchi.level + 1;
-      const nextAnimal = ANIMAL_EVOLUTION_ORDER[nextLevel - 1];
+
+      // Proteção: Garante que nextAnimal sempre receba um valor válido e não "undefined"
+      const nextAnimal =
+        ANIMAL_EVOLUTION_ORDER?.[nextLevel - 1] ||
+        ANIMAL_EVOLUTION_ORDER?.[ANIMAL_EVOLUTION_ORDER.length - 1] ||
+        tamagotchi.type;
 
       setTamagotchi((prev) => ({
         ...prev,
@@ -250,7 +299,7 @@ export default function HomeScreen() {
       rotationY.current = 0;
       rotationX.current = 0;
     }
-  }, [xp, tamagotchi.level]);
+  }, [xp, tamagotchi.level, tamagotchi.type]);
 
   // --- Interações do Jogo ---
   const handleAction = (type) => {
@@ -269,6 +318,9 @@ export default function HomeScreen() {
     };
 
     const action = actionConfig[type];
+
+    // Proteção se o tipo de ação não existir no mapeamento
+    if (!action) return;
 
     if (stamina < action.staminaCost) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -313,7 +365,13 @@ export default function HomeScreen() {
   const handlePurchase = async (sku) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await RNIap.requestPurchase({ sku });
+
+      await RNIap.requestPurchase({
+        type: "iap",
+        request: {
+          apple: { sku: sku },
+        },
+      });
     } catch (err) {
       Alert.alert("Warning", "Could not start the purchase right now.");
     }

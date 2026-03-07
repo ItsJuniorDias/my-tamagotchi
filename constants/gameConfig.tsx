@@ -16,12 +16,16 @@ export const ANIMAL_EVOLUTION_ORDER = [
   "Pinguin",
   "Wolf",
   "Horse",
+  "Ghost",
   "Cat",
+  "Bat",
   "Tiger",
   "BlackWolf",
   "Demon",
   "Spider",
   "TRex",
+  "DragonRed",
+  "Kurama",
   "Dragon",
 ];
 
@@ -39,10 +43,15 @@ export const PET_MODELS = {
     "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Horse.glb",
   Stork:
     "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Stork.glb",
+
+  Ghost:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772372605/Ghost_er1olz.glb",
   Duck: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
   Wolf: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772233497/Wolf_d6xafb.glb",
   Fox: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772234042/Fox_4_ve7htm.glb",
   Cat: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772222873/Kitty_001_jq4gis.glb",
+  Bat: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772372579/Bat_lyueku.glb",
+
   Tiger:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772221921/Tiger_001_fzvav5.glb",
   Pinguin:
@@ -54,6 +63,13 @@ export const PET_MODELS = {
   Spider:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288806/Spider_c5xdx7.glb",
   TRex: "https://res.cloudinary.com/dqvujibkn/image/upload/v1772288815/T-Rex_j3w0kk.glb",
+
+  DragonRed:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772372558/Dragon_me1lrz.glb",
+
+  Kurama:
+    "https://res.cloudinary.com/dqvujibkn/image/upload/v1772373178/Kurama_mlw0dw.glb",
+
   Dragon:
     "https://res.cloudinary.com/dqvujibkn/image/upload/v1772283735/Dragon_Rigged_xfawyw.glb",
   default:

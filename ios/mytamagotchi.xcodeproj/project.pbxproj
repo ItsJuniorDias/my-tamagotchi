@@ -23,7 +23,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = mytamagotchi/Info.plist; sourceTree = "<group>"; };
 		2305D93FB1EBC5E6B7738A08 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-mytamagotchi/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = mytamagotchi/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B315B5CD1B7C43E3D7658167 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = mytamagotchi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B315B5CD1B7C43E3D7658167 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = mytamagotchi/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B9C979C656B3749EBEB02F91 /* Pods-mytamagotchi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-mytamagotchi.debug.xcconfig"; path = "Target Support Files/Pods-mytamagotchi/Pods-mytamagotchi.debug.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		E49A2BA4B8B8466CCB9A0BC4 /* libPods-mytamagotchi.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-mytamagotchi.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -73,7 +73,6 @@
 				B9C979C656B3749EBEB02F91 /* Pods-mytamagotchi.debug.xcconfig */,
 				081E5BA5F207AC60EB4A3E5D /* Pods-mytamagotchi.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -166,7 +165,6 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = 968FPR7Y35;
 						LastSwiftMigration = 1250;
 						ProvisioningStyle = Automatic;
 					};
@@ -351,7 +349,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 968FPR7Y35;
+				DEVELOPMENT_TEAM = 9337P26ZJ6;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -370,8 +368,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.mytamagotchi;
-				PRODUCT_NAME = mytamagotchi;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alexandrejunior.mytamagotchi;
+				PRODUCT_NAME = "MyTamagotchi";
 				SWIFT_OBJC_BRIDGING_HEADER = "mytamagotchi/mytamagotchi-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -390,7 +388,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 968FPR7Y35;
+				DEVELOPMENT_TEAM = 9337P26ZJ6;
 				INFOPLIST_FILE = mytamagotchi/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -404,8 +402,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.mytamagotchi;
-				PRODUCT_NAME = mytamagotchi;
+				PRODUCT_BUNDLE_IDENTIFIER = com.alexandrejunior.mytamagotchi;
+				PRODUCT_NAME = "MyTamagotchi";
 				SWIFT_OBJC_BRIDGING_HEADER = "mytamagotchi/mytamagotchi-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

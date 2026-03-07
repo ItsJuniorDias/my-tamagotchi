@@ -1,4 +1,4 @@
-package com.anonymous.mytamagotchi
+package com.alexandrejunior.mytamagotchi
 
 import android.app.Application
 import android.content.res.Configuration

@@ -2,60 +2,14 @@ import React, { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
-  ContactShadows,
   Environment,
   Float,
   useAnimations,
   useGLTF,
+  useTexture,
 } from "@react-three/drei";
 import * as THREE from "three";
 import { PET_MODELS, responsiveScaleFactor } from "../../constants/gameConfig";
-
-// --- EFEITO 1: BANHO (Bolhas subindo) ---
-const BathBubbles = ({ count = 25 }) => {
-  const groupRef = useRef(null);
-  const bubblesData = useMemo(() => {
-    return Array.from({ length: count }).map(() => ({
-      x: (Math.random() - 0.5) * 4,
-      y: Math.random() * -2 - 1.5,
-      z: (Math.random() - 0.5) * 4,
-      scale: Math.random() * 0.2 + 0.05,
-      speed: Math.random() * 2 + 1,
-      wobble: Math.random() * 3,
-    }));
-  }, [count]);
-
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
-    groupRef.current.children.forEach((bubble, i) => {
-      const data = bubblesData[i];
-      bubble.position.y += data.speed * delta;
-      bubble.position.x +=
-        Math.sin(state.clock.elapsedTime * data.wobble + i) * 0.01;
-      if (bubble.position.y > 4) {
-        bubble.position.y = -2;
-        bubble.position.x = (Math.random() - 0.5) * 4;
-      }
-    });
-  });
-
-  return (
-    <group ref={groupRef}>
-      {bubblesData.map((data, i) => (
-        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
-          <sphereGeometry args={[1, 16, 16]} />
-          <meshStandardMaterial
-            color="#A8E6CF"
-            transparent
-            opacity={0.6}
-            roughness={0.1}
-            metalness={0.1}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-};
 
 // --- EFEITO 2: COMER (Ração caindo) ---
 const EatParticles = ({ count = 15 }) => {
@@ -63,7 +17,7 @@ const EatParticles = ({ count = 15 }) => {
   const foodData = useMemo(() => {
     return Array.from({ length: count }).map(() => ({
       x: (Math.random() - 0.5) * 2,
-      y: Math.random() * 4 + 2, // Começam no alto
+      y: Math.random() * 4 + 2,
       z: (Math.random() - 0.5) * 2,
       scale: Math.random() * 0.1 + 0.05,
       speed: Math.random() * 3 + 2,
@@ -74,10 +28,12 @@ const EatParticles = ({ count = 15 }) => {
     if (!groupRef.current) return;
     groupRef.current.children.forEach((food, i) => {
       const data = foodData[i];
-      food.position.y -= data.speed * delta; // Caem
+      if (!data) return;
+
+      food.position.y -= data.speed * delta;
       food.rotation.x += delta * 2;
       food.rotation.y += delta * 2;
-      // Reseta a posição quando chega no chão
+
       if (food.position.y < -1) {
         food.position.y = Math.random() * 2 + 3;
         food.position.x = (Math.random() - 0.5) * 2;
@@ -101,6 +57,7 @@ const EatParticles = ({ count = 15 }) => {
 const PlayParticles = ({ count = 30 }) => {
   const groupRef = useRef(null);
   const colors = ["#FF5733", "#33FF57", "#3357FF", "#F3FF33", "#FF33F3"];
+
   const playData = useMemo(() => {
     return Array.from({ length: count }).map(() => ({
       x: (Math.random() - 0.5) * 5,
@@ -117,13 +74,14 @@ const PlayParticles = ({ count = 30 }) => {
     if (!groupRef.current) return;
     groupRef.current.children.forEach((particle, i) => {
       const data = playData[i];
+      if (!data) return;
+
       particle.rotation.x += delta * 5;
       particle.rotation.y += delta * 5;
       particle.position.x += data.speedX * delta;
       particle.position.y += data.speedY * delta;
 
-      // Mantém os confetes próximos ao pet
-      if (particle.position.distanceTo(new THREE.Vector3(0, 0, 0)) > 3) {
+      if (particle.position.length() > 3) {
         particle.position.set(0, 0, 0);
       }
     });
@@ -141,50 +99,7 @@ const PlayParticles = ({ count = 30 }) => {
   );
 };
 
-// --- EFEITO 4: DORMIR (Bolhas de sonho lentas) ---
-const SleepParticles = ({ count = 8 }) => {
-  const groupRef = useRef(null);
-  const sleepData = useMemo(() => {
-    return Array.from({ length: count }).map(() => ({
-      x: (Math.random() - 0.5) * 3,
-      y: Math.random() * 2,
-      z: (Math.random() - 0.5) * 3,
-      scale: Math.random() * 0.2 + 0.1,
-      speed: Math.random() * 0.5 + 0.2, // Muito lento
-    }));
-  }, [count]);
-
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
-    groupRef.current.children.forEach((bubble, i) => {
-      const data = sleepData[i];
-      bubble.position.y += data.speed * delta;
-      bubble.position.x += Math.sin(state.clock.elapsedTime + i) * 0.005;
-
-      // Efeito de "pulsar" respirando
-      const currentScale =
-        data.scale + Math.sin(state.clock.elapsedTime * 2 + i) * 0.05;
-      bubble.scale.set(currentScale, currentScale, currentScale);
-
-      if (bubble.position.y > 4) {
-        bubble.position.y = -1;
-        bubble.position.x = (Math.random() - 0.5) * 3;
-      }
-    });
-  });
-
-  return (
-    <group ref={groupRef}>
-      {sleepData.map((data, i) => (
-        <mesh key={i} position={[data.x, data.y, data.z]} scale={data.scale}>
-          <sphereGeometry args={[1, 16, 16]} />
-          <meshStandardMaterial color="#1E5BB7" transparent opacity={0.4} />
-        </mesh>
-      ))}
-    </group>
-  );
-};
-
+// --- HOLOGRAMA DE CARREGAMENTO ---
 const LoadingHologram = () => {
   const meshRef = useRef(null);
   useFrame((_, delta) => {
@@ -206,6 +121,7 @@ const LoadingHologram = () => {
   );
 };
 
+// --- PET 3D PRINCIPAL ---
 const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
   const url = PET_MODELS[type] || PET_MODELS.default;
   const { scene, animations } = useGLTF(url);
@@ -214,40 +130,47 @@ const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (names.length === 0) return;
+    if (!names || names.length === 0) return;
     const actionName = names[index];
     const action = actions[actionName];
-    action?.reset().fadeIn(0.5).play();
+
+    if (action) {
+      action.reset().fadeIn(0.5).play();
+    }
 
     const timeout = setTimeout(() => {
       setIndex((prevIndex) => (prevIndex + 1) % names.length);
     }, 5000);
 
     return () => {
-      action?.fadeOut(0.5);
+      if (action) action.fadeOut(0.5);
       clearTimeout(timeout);
     };
   }, [index, actions, names]);
 
   const config = {
-    [PET_MODELS.Duck]: { scale: 2.5, positionY: -0.2 },
-    [PET_MODELS.Flamingo]: { scale: 0.05, positionY: -0.2 },
-    [PET_MODELS.Stork]: { scale: 0.05, positionY: -0.2 },
-    [PET_MODELS.Horse]: { scale: 0.03, positionY: -0.8 },
-    [PET_MODELS.Parrot]: { scale: 0.09, positionY: -0.8 },
-    [PET_MODELS.Wolf]: { scale: 1.5, positionY: -0.9 },
-    [PET_MODELS.Fox]: { scale: 0.05, positionY: -0.9 },
-    [PET_MODELS.Cat]: { scale: 15, positionY: -0.9 },
-    [PET_MODELS.Tiger]: { scale: 3.5, positionY: -0.9 },
-    [PET_MODELS.Pinguin]: { scale: 3.5, positionY: -0.9 },
-    [PET_MODELS.Spider]: { scale: 1.2, positionY: -0.9 },
-    [PET_MODELS.Demon]: { scale: 1.5, positionY: -0.9 },
-    [PET_MODELS.BlackWolf]: { scale: 4.5, positionY: -0.9 },
-    [PET_MODELS.TRex]: { scale: 0.3, positionY: -0.9 },
-    [PET_MODELS.Dragon]: { scale: 0.7, positionY: -0.9 },
+    Duck: { scale: 2.5, positionY: -0.2 },
+    Flamingo: { scale: 0.05, positionY: -0.2 },
+    Stork: { scale: 0.05, positionY: -0.2 },
+    Horse: { scale: 0.03, positionY: -0.8 },
+    Parrot: { scale: 0.09, positionY: -0.8 },
+    Wolf: { scale: 1.5, positionY: -0.9 },
+    Fox: { scale: 0.05, positionY: -0.9 },
+    Cat: { scale: 15, positionY: -0.9 },
+    Bat: { scale: 1.2, positionY: -0.9 },
+    Ghost: { scale: 1.7, positionY: -0.9 },
+    Tiger: { scale: 3.5, positionY: -0.9 },
+    Pinguin: { scale: 3.5, positionY: -0.9 },
+    Spider: { scale: 1.2, positionY: -0.9 },
+    Demon: { scale: 1.5, positionY: -0.9 },
+    BlackWolf: { scale: 4.5, positionY: -0.9 },
+    TRex: { scale: 0.3, positionY: -0.9 },
+    DragonRed: { scale: 0.03, positionY: -0.9 },
+    Kurama: { scale: 2.5, positionY: -0.9 },
+    Dragon: { scale: 0.7, positionY: -0.9 },
   };
 
-  const currentConfig = config[url] || { scale: 0.05, positionY: -0.2 };
+  const currentConfig = config[type] || { scale: 0.05, positionY: -0.2 };
   const finalScale = currentConfig.scale * responsiveScaleFactor;
 
   useFrame(() => {
@@ -283,8 +206,57 @@ const PremiumPet3D = ({ type, rotationY, rotationX, scaleMultiplier }) => {
   );
 };
 
-useGLTF.preload(PET_MODELS.default);
+// --- NOVA SOMBRA REDONDA E SUAVE (FEITA COM CÓDIGO/SHADER) ---
+const FakeRoundShadow = ({ opacity = 0.4, scale = 4, positionY = -1.79 }) => {
+  // Criamos um material customizado que desenha um gradiente radial preto transparente
+  const shaderArgs = useMemo(
+    () => ({
+      uniforms: {
+        uColor: { value: new THREE.Color("#000000") },
+        uOpacity: { value: opacity },
+      },
+      vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+      fragmentShader: `
+      varying vec2 vUv;
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      void main() {
+        // Calcula a distância do centro (0.5, 0.5)
+        float dist = distance(vUv, vec2(0.5));
+        
+        // Cria um degradê suave (esfumaçado) das bordas para o centro
+        // Borda (0.5) fica transparente, centro (0.1) fica opaco
+        float alpha = smoothstep(0.5, 0.1, dist) * uOpacity;
+        
+        gl_FragColor = vec4(uColor, alpha);
+      }
+    `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.MultiplyBlending, // Faz a sombra escurecer o chão de forma natural
+    }),
+    [opacity],
+  );
 
+  return (
+    <mesh
+      position={[0, positionY, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      scale={[scale, scale, 1]}
+    >
+      <planeGeometry args={[1, 1]} />
+      <shaderMaterial args={[shaderArgs]} />
+    </mesh>
+  );
+};
+
+// --- COMPONENTE PRINCIPAL EXPORTADO ---
 export default function Pet3DViewer({
   type,
   rotationY,
@@ -297,6 +269,13 @@ export default function Pet3DViewer({
 }) {
   const scaleMultiplier = useRef(1);
 
+  // Ajuste o tamanho da sombra dependendo do tipo de pet, se necessário
+  const shadowConfig = {
+    Horse: { positionY: -1.79, scale: 5 },
+    Cat: { positionY: -1.79, scale: 3.5 },
+  };
+  const currentShadow = shadowConfig[type] || { positionY: -1.79, scale: 4 };
+
   return (
     <View style={styles.petArea} {...panHandlers}>
       <Canvas
@@ -306,20 +285,16 @@ export default function Pet3DViewer({
           const pixelStorei = _gl.pixelStorei.bind(_gl);
           _gl.pixelStorei = function (...args) {
             const [parameter] = args;
-            if (parameter === _gl.UNPACK_FLIP_Y_WEBGL)
-              return pixelStorei(...args);
+            if (parameter === _gl.UNPACK_FLIP_Y_WEBGL) return;
+            return pixelStorei(...args);
           };
         }}
       >
-        {/* Controle dinâmico de luz: Apaga as luzes se estiver dormindo */}
         <ambientLight intensity={isSleeping ? 0.2 : 1} />
         <directionalLight
           position={[5, 10, 5]}
           intensity={isSleeping ? 0.3 : 2}
         />
-
-        {/* Desativa o Environment da cidade se estiver dormindo para ficar mais escuro */}
-        {!isSleeping && <Environment preset="city" />}
 
         <Suspense fallback={<LoadingHologram />}>
           <PremiumPet3D
@@ -329,21 +304,16 @@ export default function Pet3DViewer({
             scaleMultiplier={scaleMultiplier}
           />
 
-          {/* Renderização Condicional das Animações */}
-          {isBathing && <BathBubbles />}
+          {/* Sombra agora fica dentro do Suspense porque carrega uma textura */}
+          <FakeRoundShadow
+            opacity={isSleeping ? 0.15 : 0.4}
+            scale={currentShadow.scale}
+            positionY={currentShadow.positionY}
+          />
+
           {isEating && <EatParticles />}
           {isPlaying && <PlayParticles />}
-          {isSleeping && <SleepParticles />}
         </Suspense>
-
-        <ContactShadows
-          position={[0, -1.8, 0]}
-          opacity={0.2}
-          scale={8}
-          blur={2}
-          far={4}
-          color="#000"
-        />
       </Canvas>
     </View>
   );
