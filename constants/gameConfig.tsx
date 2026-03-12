@@ -30,8 +30,7 @@ export const ANIMAL_EVOLUTION_ORDER = [
 ];
 
 export const itemSKUs = Platform.select({
-  ios: ["com.tamagotchi.pacotebasico_500", "com.tamagotchi.bauestrelas_1500"],
-  android: [],
+  ios: ["com.tamagotchi.bauestrelas_1500", "com.tamagotchi.pacotebasico_500"],
 });
 
 export const PET_MODELS = {

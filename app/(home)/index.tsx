@@ -2,6 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
+import Purchases from "react-native-purchases"; // Importando apenas o RevenueCat
+
 import {
   Alert,
   PanResponder,
@@ -10,16 +12,14 @@ import {
   View,
   Platform,
 } from "react-native";
-import * as RNIap from "react-native-iap";
 import * as Notifications from "expo-notifications";
 
-// Constantes e Configurações
+// Constantes e Configurações (removido itemSKUs, o RevenueCat gerencia isso no painel)
 import {
   STORAGE_KEY,
   MAX_STAMINA,
   STAMINA_RECHARGE_TIME,
   ANIMAL_EVOLUTION_ORDER,
-  itemSKUs,
 } from "../../constants/gameConfig";
 
 // Componentes
@@ -29,7 +29,6 @@ import Pet3DViewer from "../../components/pet-3d";
 import ActionDock from "../../components/action-dock";
 import StoreModal from "../../components/store-modal";
 
-// Constante de decaimento dos status (60000ms = 1 minuto)
 const STAT_DECAY_INTERVAL = 60000;
 
 Notifications.setNotificationHandler({
@@ -51,7 +50,8 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [stamina, setStamina] = useState(MAX_STAMINA);
   const [isStoreVisible, setIsStoreVisible] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]); // Agora guardará os "Packages" do RevenueCat
+  const [isPro, setIsPro] = useState(false); // Novo estado para controlar assinatura
 
   const [tamagotchi, setTamagotchi] = useState({
     type: ANIMAL_EVOLUTION_ORDER?.[0] || "DefaultPet",
@@ -69,14 +69,12 @@ export default function HomeScreen() {
     async function requestPermissions() {
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
-
       let finalStatus = existingStatus;
 
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-
       if (finalStatus !== "granted")
         console.log("Notification permission denied!");
     }
@@ -87,7 +85,6 @@ export default function HomeScreen() {
     const scheduleStaminaNotification = async () => {
       await Notifications.cancelAllScheduledNotificationsAsync();
       if (stamina < MAX_STAMINA && STAMINA_RECHARGE_TIME > 0) {
-        // Proteção de divisão por zero
         const missingStamina = MAX_STAMINA - stamina;
         const timeToFullSeconds =
           (missingStamina * STAMINA_RECHARGE_TIME) / 1000;
@@ -110,58 +107,31 @@ export default function HomeScreen() {
     scheduleStaminaNotification();
   }, [stamina, tamagotchi?.name]);
 
-  // --- Efeitos de Compras ---
+  // --- REVENUECAT: Buscar Ofertas e Status do Usuário ---
   useEffect(() => {
-    let purchaseUpdateSubscription;
-    let purchaseErrorSubscription;
-
-    const initIAP = async () => {
+    const fetchRevenueCatData = async () => {
       try {
-        await RNIap.initConnection();
-        // Proteção: Garante que itemSKUs existe e não está vazio antes de chamar a API
-        if (Platform.OS === "ios" && itemSKUs && itemSKUs.length > 0) {
-          const items = await RNIap.fetchProducts({ skus: itemSKUs });
+        // 2. Busca os pacotes configurados no painel do RevenueCat
+        const offerings = await Purchases.getOfferings();
 
-          setProducts(items);
+        console.log("Dados do RevenueCat carregados:", offerings);
+
+        if (
+          offerings.current !== null &&
+          offerings.current.availablePackages.length !== 0
+        ) {
+          console.log(
+            "Pacotes carregados do RevenueCat:",
+            offerings.current.availablePackages,
+          );
+          setProducts(offerings.current.availablePackages);
         }
       } catch (err) {
-        console.warn("Error connecting to the store:", err?.message || err);
+        console.warn("Erro ao comunicar com RevenueCat:", err);
       }
     };
 
-    initIAP();
-
-    purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
-      async (purchase) => {
-        // Proteção: Garante que o objeto purchase e o receipt existem
-        if (purchase && purchase.transactionId && purchase.productId) {
-          try {
-            if (purchase.productId === "com.tamagotchi.pacotebasico_500")
-              setCoins((prev) => prev + 500);
-            else if (purchase.productId === "com.tamagotchi.bauestrelas_1500")
-              setCoins((prev) => prev + 1500);
-
-            await RNIap.finishTransaction({ purchase, isConsumable: true });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert("Success!", "Stars have been added to your account.");
-            setIsStoreVisible(false);
-          } catch (error) {
-            console.error("Error finishing purchase:", error);
-          }
-        }
-      },
-    );
-
-    purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
-      if (error && error.code !== RNIap.ErrorCode.UserCancelled)
-        Alert.alert("Error", "Purchase failed. Please try again.");
-    });
-
-    return () => {
-      if (purchaseUpdateSubscription) purchaseUpdateSubscription.remove();
-      if (purchaseErrorSubscription) purchaseErrorSubscription.remove();
-      RNIap.endConnection();
-    };
+    fetchRevenueCatData();
   }, []);
 
   // --- AsyncStorage: Carregamento e Decaimento Offline ---
@@ -175,17 +145,13 @@ export default function HomeScreen() {
           if (parsedData.xp !== undefined) setXp(parsedData.xp);
           if (parsedData.coins !== undefined) setCoins(parsedData.coins);
 
-          // Lógica de decaimento baseada no tempo offline
           if (parsedData.lastSavedTime) {
             const timePassed = Date.now() - parsedData.lastSavedTime;
-
-            // Proteção: Evita divisão por zero ou valores NaN
             const decayTicks =
               STAT_DECAY_INTERVAL > 0
                 ? Math.floor(timePassed / STAT_DECAY_INTERVAL)
                 : 0;
 
-            // Recuperação de Stamina
             if (parsedData.stamina !== undefined) {
               const staminaToRecover =
                 STAMINA_RECHARGE_TIME > 0
@@ -196,7 +162,6 @@ export default function HomeScreen() {
               );
             }
 
-            // Aplica o decaimento garantindo que não fique menor que 0
             if (parsedData.hunger !== undefined)
               setHunger(Math.max(0, parsedData.hunger - decayTicks));
             if (parsedData.happiness !== undefined)
@@ -206,7 +171,6 @@ export default function HomeScreen() {
             if (parsedData.hygiene !== undefined)
               setHygiene(Math.max(0, parsedData.hygiene - decayTicks));
           } else {
-            // Fallback se não tiver lastSavedTime
             if (parsedData.hunger !== undefined) setHunger(parsedData.hunger);
             if (parsedData.happiness !== undefined)
               setHappiness(parsedData.happiness);
@@ -249,18 +213,16 @@ export default function HomeScreen() {
 
   // --- Intervalos de Tempo Ativos ---
   useEffect(() => {
-    // Intervalo para recuperar Stamina do jogador
     const staminaInterval = setInterval(() => {
       setStamina((prev) => (prev < MAX_STAMINA ? prev + 1 : prev));
-    }, STAMINA_RECHARGE_TIME || 60000); // Fallback de segurança
+    }, STAMINA_RECHARGE_TIME || 60000);
 
-    // Intervalo para decaimento dos status do Pet
     const statsInterval = setInterval(() => {
       setHunger((prev) => Math.max(0, prev - 1));
       setHappiness((prev) => Math.max(0, prev - 1));
       setEnergy((prev) => Math.max(0, prev - 1));
       setHygiene((prev) => Math.max(0, prev - 1));
-    }, STAT_DECAY_INTERVAL || 60000); // Fallback de segurança
+    }, STAT_DECAY_INTERVAL || 60000);
 
     return () => {
       clearInterval(staminaInterval);
@@ -277,8 +239,6 @@ export default function HomeScreen() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const nextLevel = tamagotchi.level + 1;
-
-      // Proteção: Garante que nextAnimal sempre receba um valor válido e não "undefined"
       const nextAnimal =
         ANIMAL_EVOLUTION_ORDER?.[nextLevel - 1] ||
         ANIMAL_EVOLUTION_ORDER?.[ANIMAL_EVOLUTION_ORDER.length - 1] ||
@@ -318,8 +278,6 @@ export default function HomeScreen() {
     };
 
     const action = actionConfig[type];
-
-    // Proteção se o tipo de ação não existir no mapeamento
     if (!action) return;
 
     if (stamina < action.staminaCost) {
@@ -362,19 +320,44 @@ export default function HomeScreen() {
     }
   };
 
-  const handlePurchase = async (sku: string) => {
+  // --- REVENUECAT: Realizar Compra ---
+  const handlePurchase = async (packageToBuy: string) => {
+    console.log("Iniciando compra do pacote:", packageToBuy);
+
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      await RNIap.requestPurchase({
-        request: {
-          apple: { sku: sku },
-        },
-        type: "in-app",
-        useAlternativeBilling: false,
-      });
+      // O RevenueCat já lida com todo o fluxo transacional nativo
+      const { customerInfo, productIdentifier } =
+        await Purchases.purchasePackage(
+          products.find((p) => p.identifier === packageToBuy),
+        );
+
+      console.log("Compra realizada!", productIdentifier);
+
+      // 1. Verifica se foi uma compra de consumível (Estrelas)
+      if (productIdentifier === "com.tamagotchi.pacotebasico_500") {
+        setCoins((prev) => prev + 500);
+      } else if (productIdentifier === "com.tamagotchi.bauestrelas_1500") {
+        setCoins((prev) => prev + 1500);
+      }
+
+      // 2. Verifica se foi a compra de Assinatura (Entitlement "Pro")
+      if (
+        typeof customerInfo.entitlements.active["My Tamagotchi Pro"] !==
+        "undefined"
+      ) {
+        setIsPro(true);
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Success!", "Purchase completed successfully.");
+      setIsStoreVisible(false);
     } catch (err) {
-      Alert.alert("Warning", "Could not start the purchase right now.");
+      if (!err.userCancelled) {
+        console.error("Erro na compra:", err);
+        Alert.alert("Error", "Could not complete the purchase right now.");
+      }
     }
   };
 
@@ -464,6 +447,7 @@ export default function HomeScreen() {
 
       <ActionDock onAction={handleAction} />
 
+      {/* O modal agora recebe os "Packages" em vez dos itens do RNIap */}
       <StoreModal
         visible={isStoreVisible}
         onClose={() => setIsStoreVisible(false)}

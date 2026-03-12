@@ -60,7 +60,7 @@ export default function StoreModal({
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("com.tamagotchi.pacotebasico_500")}
+              onPress={() => onPurchase("coin_500")}
             >
               <View
                 style={[
@@ -74,10 +74,12 @@ export default function StoreModal({
                   color="#34C759"
                 />
               </View>
+
               <View style={styles.storeItemInfo}>
                 <Text style={styles.storeItemTitle}>Basic Package</Text>
                 <Text style={styles.storeItemDesc}>+500 Stars</Text>
               </View>
+
               <View style={[styles.buyButton, { backgroundColor: "#007AFF" }]}>
                 <Text style={[styles.buyButtonText, { color: "#FFF" }]}>
                   {getPrice("com.tamagotchi.pacotebasico_500", "$4.99")}
@@ -87,7 +89,7 @@ export default function StoreModal({
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("com.tamagotchi.bauestrelas_1500")}
+              onPress={() => onPurchase("coin_1500")}
             >
               <View
                 style={[

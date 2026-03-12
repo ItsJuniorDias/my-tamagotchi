@@ -9,7 +9,10 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 // Mantém a Splash Screen visível enquanto os recursos carregam
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +42,17 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+    // Platform-specific API keys
+    const iosApiKey = "test_MCfhnxGhNcvAIdwquSuOirfWzrv";
+
+    if (Platform.OS === "ios") {
+      Purchases.configure({ apiKey: iosApiKey });
+    }
+  }, []);
 
   if (!loaded) {
     return null;

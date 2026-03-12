@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "MyTamagotchi.app"
-               BlueprintName = "mytamagotchi"
-               ReferencedContainer = "container:mytamagotchi.xcodeproj">
+               BuildableName = "Tamagotchi.app"
+               BlueprintName = "Tamagotchi"
+               ReferencedContainer = "container:Tamagotchi.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "mytamagotchiTests.xctest"
-               BlueprintName = "mytamagotchiTests"
-               ReferencedContainer = "container:mytamagotchi.xcodeproj">
+               BuildableName = "TamagotchiTests.xctest"
+               BlueprintName = "TamagotchiTests"
+               ReferencedContainer = "container:Tamagotchi.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "MyTamagotchi.app"
-            BlueprintName = "mytamagotchi"
-            ReferencedContainer = "container:mytamagotchi.xcodeproj">
+            BuildableName = "Tamagotchi.app"
+            BlueprintName = "Tamagotchi"
+            ReferencedContainer = "container:Tamagotchi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "MyTamagotchi.app"
-            BlueprintName = "mytamagotchi"
-            ReferencedContainer = "container:mytamagotchi.xcodeproj">
+            BuildableName = "Tamagotchi.app"
+            BlueprintName = "Tamagotchi"
+            ReferencedContainer = "container:Tamagotchi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
