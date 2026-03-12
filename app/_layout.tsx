@@ -14,11 +14,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
-// Mantém a Splash Screen visível enquanto os recursos carregam
 SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  // Garante que o deep linking ou recarregamento saiba para onde voltar
   initialRouteName: "(app)/index",
 };
 
@@ -31,52 +29,58 @@ export default function RootLayout() {
     "Roboto-Semibold": require("../assets/fonts/Roboto-SemiBold.ttf"),
   });
 
-  // Log de erro de fontes (Apple style: tratar erro silenciosamente mas registrar)
+  // 1. CORREÇÃO: Apenas registre o erro em produção, não dê throw.
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.error("Erro ao carregar fontes:", error);
+      // Opcional: Você pode reportar isso para um serviço como Sentry/Crashlytics aqui
+    }
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      // Esconde a splash screen com um pequeno delay para suavidade
+    if (loaded || error) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, error]);
 
   useEffect(() => {
+    // 2. CORREÇÃO: Configuração segura do RevenueCat
     Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
-    // Platform-specific API keys
-    const iosApiKey = "test_MCfhnxGhNcvAIdwquSuOirfWzrv";
+    const iosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
 
     if (Platform.OS === "ios") {
-      Purchases.configure({ apiKey: iosApiKey });
+      if (iosApiKey) {
+        Purchases.configure({ apiKey: iosApiKey });
+      } else {
+        // Se a chave não existir, registramos o erro em vez de crashar
+        console.warn(
+          "RevenueCat: Chave iOS não encontrada nas variáveis de ambiente.",
+        );
+      }
     }
   }, []);
 
-  if (!loaded) {
+  if (!loaded && !error) {
     return null;
   }
 
   return (
-    // GestureHandlerRootView no topo permite gestos em qualquer tela do app
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack
           screenOptions={{
             headerShown: false,
-            animation: "fade_from_bottom", // Transição suave estilo iOS
+            animation: "fade_from_bottom",
             contentStyle: {
               backgroundColor: colorScheme === "dark" ? "#000" : "#FFF",
             },
           }}
         >
-          {/* Definição simplificada das telas principais */}
           <Stack.Screen name="(app)/index" />
           <Stack.Screen name="(home)/index" />
         </Stack>
 
-        {/* Status bar adaptativa (branca no dark, preta no light) */}
         <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       </ThemeProvider>
     </GestureHandlerRootView>
