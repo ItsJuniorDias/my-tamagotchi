@@ -85,6 +85,7 @@ export default function HomeScreen() {
           // 2. Busca os produtos configurados
           const offerings = await fetchProducts({ skus: itemSKUs });
 
+          console.log("Pacotes do RevenueCat:", offerings);
           setPackages(offerings);
         }
       } catch (e) {
