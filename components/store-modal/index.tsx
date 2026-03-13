@@ -1,8 +1,8 @@
-import React from "react";
-import { Modal, View, TouchableOpacity, StyleSheet } from "react-native";
-import { BlurView } from "expo-blur";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Text from "@/components/text";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import React from "react";
+import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
 
 export default function StoreModal({
   visible,
@@ -60,7 +60,7 @@ export default function StoreModal({
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("coin_500")}
+              onPress={() => onPurchase("com.tamagotchi.pacotebasico_500")}
             >
               <View
                 style={[
@@ -89,7 +89,7 @@ export default function StoreModal({
 
             <TouchableOpacity
               style={styles.storeItem}
-              onPress={() => onPurchase("coin_1500")}
+              onPress={() => onPurchase("com.tamagotchi.bauestrelas_1500")}
             >
               <View
                 style={[

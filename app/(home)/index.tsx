@@ -12,12 +12,20 @@ import {
   View,
 } from "react-native";
 
-// REVENUECAT: Importe o SDK do RevenueCat
-// import Purchases from "react-native-purchases";
+import {
+  endConnection,
+  fetchProducts,
+  finishTransaction,
+  initConnection,
+  purchaseErrorListener,
+  purchaseUpdatedListener,
+  requestPurchase,
+} from "react-native-iap";
 
 // Constantes e Configurações
 import {
   ANIMAL_EVOLUTION_ORDER,
+  itemSKUs,
   MAX_STAMINA,
   STAMINA_RECHARGE_TIME,
   STORAGE_KEY,
@@ -68,25 +76,58 @@ export default function HomeScreen() {
   const startRotationY = useRef(0);
   const startRotationX = useRef(0);
 
-  // --- REVENUECAT: Buscar Ofertas (Offerings) ---
-  // useEffect(() => {
-  //   const fetchOfferings = async () => {
-  //     try {
-  //       const offerings = await Purchases.getOfferings();
-  //       if (
-  //         offerings.current !== null &&
-  //         offerings.current.availablePackages.length !== 0
-  //       ) {
-  //         // Atualiza o estado com os pacotes configurados no RevenueCat
-  //         setPackages(offerings.current.availablePackages);
-  //       }
-  //     } catch (e) {
-  //       console.error("Erro ao buscar pacotes do RevenueCat:", e);
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchOfferings = async () => {
+      try {
+        const connected = await initConnection();
 
-  //   fetchOfferings();
-  // }, []);
+        if (connected) {
+          // 2. Busca os produtos configurados
+          const offerings = await fetchProducts({ skus: itemSKUs });
+
+          setPackages(offerings);
+        }
+      } catch (e) {
+        console.error("Erro ao buscar pacotes do RevenueCat:", e);
+      }
+    };
+
+    fetchOfferings();
+
+    let purchaseUpdateSubscription;
+    let purchaseErrorSubscription;
+
+    purchaseUpdateSubscription = purchaseUpdatedListener(async (purchase) => {
+      console.log("Compra atualizada:", purchase);
+
+      const receipt = purchase.transactionId;
+
+      if (receipt) {
+        try {
+          // Aqui você pode validar o recibo no seu backend, se necessário
+
+          // Finaliza a transação para que a Apple saiba que foi entregue
+          await finishTransaction({ purchase, isConsumable: true });
+          Alert.alert("Sucesso", "Compra realizada com sucesso!");
+        } catch (ackErr) {
+          console.warn("Erro ao finalizar transação", ackErr);
+        }
+      }
+    });
+
+    // 4. Listener para erros ou cancelamentos
+    purchaseErrorSubscription = purchaseErrorListener((error) => {
+      console.warn("Erro na compra", error);
+      Alert.alert("Aviso", "A compra foi cancelada ou falhou.");
+    });
+
+    return () => {
+      // Limpa os listeners e encerra a conexão ao desmontar o componente
+      if (purchaseUpdateSubscription) purchaseUpdateSubscription.remove();
+      if (purchaseErrorSubscription) purchaseErrorSubscription.remove();
+      endConnection();
+    };
+  }, []);
 
   // --- Efeitos de Permissão e Notificação ---
   useEffect(() => {
@@ -337,15 +378,20 @@ export default function HomeScreen() {
   };
 
   // --- REVENUECAT: Lógica de Compra com Dinheiro Real ---
-  const handleBuy = async (pkg) => {
-    console.log(pkg, "package selecionado para compra");
+  const handleBuy = async (pkg: string) => {
+    const packageId = packages.find((item) => item.id === pkg);
+
+    console.log(packageId, "PACKAGE ID");
 
     try {
-      const { customerInfo } = await Purchases.purchasePackage(
-        packages?.find((item) => item?.identifier === pkg),
-      );
-
-      console.log(customerInfo, "informações do cliente após compra");
+      await requestPurchase({
+        request: {
+          ios: {
+            sku: packageId.id,
+          },
+        },
+        type: "in-app",
+      });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Sucesso!", "Compra realizada com sucesso.");
