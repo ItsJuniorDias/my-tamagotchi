@@ -54,7 +54,7 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [stamina, setStamina] = useState(MAX_STAMINA);
   const [isStoreVisible, setIsStoreVisible] = useState(false);
-  const [products, setProducts] = useState([]); // Agora guardará os "Packages" do RevenueCat
+  const [products, setProducts] = useState<any[]>([]); // Pacotes (Packages) do RevenueCat
   const [isPro, setIsPro] = useState(false); // Novo estado para controlar assinatura
 
   const [tamagotchi, setTamagotchi] = useState({
@@ -325,17 +325,29 @@ export default function HomeScreen() {
   };
 
   // --- REVENUECAT: Realizar Compra ---
-  const handlePurchase = async (packageToBuy: string) => {
-    console.log("Iniciando compra do pacote:", packageToBuy);
+  const handlePurchase = async (productId: string) => {
+    console.log("Iniciando compra do produto:", productId);
+
+    // O modal manda o ID do produto da App Store; achamos o Package correspondente.
+    const packageToBuy = products.find(
+      (p) => p?.product?.identifier === productId,
+    );
+
+    if (!packageToBuy) {
+      // Sem pacote = SDK não configurado ou Offering vazio no painel do RevenueCat.
+      Alert.alert(
+        "Store unavailable",
+        "Purchases aren't available right now. Please try again later.",
+      );
+      return;
+    }
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // O RevenueCat já lida com todo o fluxo transacional nativo
       const { customerInfo, productIdentifier } =
-        await Purchases.purchasePackage(
-          products.find((p) => p.identifier === packageToBuy),
-        );
+        await Purchases.purchasePackage(packageToBuy);
 
       console.log("Compra realizada!", productIdentifier);
 
@@ -357,8 +369,8 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success!", "Purchase completed successfully.");
       setIsStoreVisible(false);
-    } catch (err) {
-      if (!err.userCancelled) {
+    } catch (err: any) {
+      if (!err?.userCancelled) {
         console.error("Erro na compra:", err);
         Alert.alert("Error", "Could not complete the purchase right now.");
       }

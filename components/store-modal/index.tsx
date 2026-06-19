@@ -15,13 +15,18 @@ export default function StoreModal({
   visible: boolean;
   onClose: () => void;
   onBuyStamina: () => void;
-  onPurchase: (sku: string) => void;
-  products: { productId: string; localizedPrice: string }[];
+  onPurchase: (productId: string) => void;
+  products: {
+    identifier: string;
+    product: { identifier: string; priceString: string };
+  }[];
 }) {
   const c = Colors;
 
+  // products = RevenueCat Packages; o preço real vem de product.priceString.
   const getPrice = (id: string, fallback: string) =>
-    products.find((p) => p.productId === id)?.localizedPrice || fallback;
+    products.find((p) => p.product?.identifier === id)?.product?.priceString ||
+    fallback;
 
   const Row = ({ icon, tint, title, desc, onPress, price, primary }: any) => (
     <TouchableOpacity
@@ -73,7 +78,7 @@ export default function StoreModal({
               desc="+500 stars"
               primary
               price={getPrice("com.tamagotchi.pacotebasico_500", "$4.99")}
-              onPress={() => onPurchase("coin_500")}
+              onPress={() => onPurchase("com.tamagotchi.pacotebasico_500")}
             />
             <Row
               icon="treasure-chest"
@@ -82,7 +87,7 @@ export default function StoreModal({
               desc="+1500 stars"
               primary
               price={getPrice("com.tamagotchi.bauestrelas_1500", "$9.99")}
-              onPress={() => onPurchase("coin_1500")}
+              onPress={() => onPurchase("com.tamagotchi.bauestrelas_1500")}
             />
           </View>
         </BlurView>

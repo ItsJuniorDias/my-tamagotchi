@@ -5,9 +5,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import { configureRevenueCat } from "@/lib/purchases";
 
 // — Design-system typefaces ———————————————————————————————————
 import {
@@ -58,14 +57,9 @@ export default function RootLayout() {
     if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
 
-  // RevenueCat — configure only when an API key is present.
+  // RevenueCat — configure once at startup (keys + setup live in lib/purchases.ts).
   useEffect(() => {
-    if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-    const iosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
-    if (Platform.OS === "ios") {
-      if (iosApiKey) Purchases.configure({ apiKey: iosApiKey });
-      else console.warn("RevenueCat: missing EXPO_PUBLIC_REVENUECAT_IOS_KEY.");
-    }
+    configureRevenueCat();
   }, []);
 
   if (!loaded && !error) return null;
