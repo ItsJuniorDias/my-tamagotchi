@@ -3,121 +3,52 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Text from "@/components/text";
+import { Colors, Radius, Shadows, Spacing } from "@/constants/theme";
 
-export default function ActionDock({ onAction }) {
+export default function ActionDock({ onAction }: any) {
+  const c = Colors;
+
+  // Each action is tinted with the stat it changes.
+  const actions = [
+    { key: "feed", icon: "food-apple", color: c.stat.hunger, label: "10 ⭐" },
+    { key: "clean", icon: "shower", color: c.stat.hygiene, label: "2 ⭐" },
+    { key: "play", icon: "controller-classic", color: c.primary, label: "5 ⭐", hero: true },
+    { key: "sleep", icon: "weather-night", color: c.stat.energy, label: "Free" },
+  ] as const;
+
   return (
-    <View style={styles.dockWrapper}>
-      <BlurView intensity={60} tint="light" style={styles.actionDock}>
-        <TouchableOpacity
-          style={styles.dockButton}
-          onPress={() => onAction("feed")}
-        >
-          <View
-            style={[
-              styles.dockIconCircle,
-              { backgroundColor: "rgba(255, 59, 48, 0.15)" },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="food-apple"
-              size={24}
-              color="#FF3B30"
-            />
-          </View>
-          <Text style={styles.dockLabel}>10 ⭐</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dockButton}
-          onPress={() => onAction("clean")}
-        >
-          <View
-            style={[
-              styles.dockIconCircle,
-              { backgroundColor: "rgba(0, 122, 255, 0.15)" },
-            ]}
-          >
-            <MaterialCommunityIcons name="shower" size={24} color="#007AFF" />
-          </View>
-          <Text style={styles.dockLabel}>2 ⭐</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dockButton}
-          onPress={() => onAction("play")}
-        >
-          <View
-            style={[
-              styles.dockIconCircle,
-              {
-                backgroundColor: "rgba(255, 149, 0, 0.15)",
-                width: 58,
-                height: 58,
-                borderRadius: 29,
-                marginBottom: 0,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="controller-classic"
-              size={28}
-              color="#FF9500"
-            />
-          </View>
-          <Text style={[styles.dockLabel, { marginTop: 4 }]}>5 ⭐</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dockButton}
-          onPress={() => onAction("sleep")}
-        >
-          <View
-            style={[
-              styles.dockIconCircle,
-              { backgroundColor: "rgba(88, 86, 214, 0.15)" },
-            ]}
-          >
-            <MaterialCommunityIcons name="bed" size={24} color="#5856D6" />
-          </View>
-          <Text style={styles.dockLabel}>Free</Text>
-        </TouchableOpacity>
+    <View style={[styles.wrapper, { borderColor: c.glassBorder }, Shadows.card]}>
+      <BlurView
+        intensity={60}
+        tint="light"
+        style={[styles.dock, { backgroundColor: c.surfaceGlass }]}
+      >
+        {actions.map((a) => (
+          <TouchableOpacity key={a.key} style={styles.button} activeOpacity={0.7} onPress={() => onAction(a.key)}>
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: a.color + "26" },
+                a.hero && styles.iconCircleHero,
+              ]}
+            >
+              <MaterialCommunityIcons name={a.icon as any} size={a.hero ? 28 : 24} color={a.color} />
+            </View>
+            <Text variant="label" color={c.textSecondary} weight="bold" style={[styles.label, a.hero && { marginTop: 4 }]}>
+              {a.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </BlurView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dockWrapper: {
-    marginBottom: 40,
-    borderRadius: 36,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-  },
-  actionDock: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.45)",
-  },
-  dockButton: { alignItems: "center", justifyContent: "center" },
-  dockIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  dockLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "rgba(60, 60, 67, 0.8)",
-  },
+  wrapper: { marginBottom: 40, borderRadius: Radius["3xl"], overflow: "hidden", borderWidth: 1 },
+  dock: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingVertical: Spacing.base, paddingHorizontal: Spacing.lg },
+  button: { alignItems: "center", justifyContent: "center" },
+  iconCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: "center", alignItems: "center", marginBottom: 6 },
+  iconCircleHero: { width: 58, height: 58, borderRadius: 29, marginBottom: 0 },
+  label: { fontSize: 13 },
 });

@@ -1,16 +1,26 @@
 import React from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
+import Text from "@/components/text";
+import { Colors, Radius, Spacing } from "@/constants/theme";
 
 export function IncubatingView() {
+  const c = Colors;
+
   return (
-    <View style={styles.generatingWrapper}>
-      <BlurView intensity={90} tint="light" style={styles.glassCard}>
-        <View style={styles.siriGlow} />
-        <ActivityIndicator size="large" color="#1C1C1E" />
-        <Text style={styles.titleLoading}>Incubating</Text>
-        <Text style={styles.subtitleLoading}>
-          Apple Intelligence is crafting your companion's unique traits...
+    <View style={styles.wrapper}>
+      <BlurView
+        intensity={90}
+        tint="light"
+        style={[styles.card, { borderColor: c.glassBorder, backgroundColor: c.surfaceGlass }]}
+      >
+        <View style={[styles.glow, { backgroundColor: c.primary }]} />
+        <ActivityIndicator size="large" color={c.primary} />
+        <Text variant="title" color={c.text} style={{ marginTop: Spacing.base }}>
+          Incubating
+        </Text>
+        <Text variant="body" color={c.textSecondary} style={styles.subtitle}>
+          Your companion is taking shape…
         </Text>
       </BlurView>
     </View>
@@ -18,38 +28,23 @@ export function IncubatingView() {
 }
 
 const styles = StyleSheet.create({
-  generatingWrapper: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  glassCard: {
+  wrapper: { flex: 1, justifyContent: "center", alignItems: "center" },
+  card: {
     width: "85%",
-    padding: 24,
-    borderRadius: 20,
+    padding: Spacing.xl,
+    borderRadius: Radius.xl,
     alignItems: "center",
-    position: "relative",
+    overflow: "hidden",
+    borderWidth: 1,
   },
-  siriGlow: {
+  glow: {
     position: "absolute",
     top: -40,
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#007AFF",
     opacity: 0.3,
     zIndex: -1,
   },
-  titleLoading: {
-    marginTop: 16,
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1C1C1E",
-  },
-  subtitleLoading: {
-    marginTop: 8,
-    fontSize: 14,
-    textAlign: "center",
-    color: "rgba(60, 60, 67, 0.6)",
-  },
+  subtitle: { marginTop: Spacing.sm, textAlign: "center" },
 });

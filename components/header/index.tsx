@@ -2,27 +2,16 @@ import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 import Text from "@/components/text";
+import { Colors, Radius, Spacing } from "@/constants/theme";
 import { MAX_STAMINA } from "../../constants/gameConfig";
 
-export default function Header({
-  tamagotchi,
-  xp,
-  stamina,
-  coins,
-  onOpenStore,
-}) {
+export default function Header({ tamagotchi, xp, stamina, coins, onOpenStore }: any) {
+  const c = Colors;
+
   const hour = new Date().getHours();
-  const greeting =
-    hour < 12
-      ? "Good morning,"
-      : hour < 18
-        ? "Good afternoon,"
-        : "Good evening,";
+  const greeting = hour < 12 ? "GOOD MORNING" : hour < 18 ? "GOOD AFTERNOON" : "GOOD EVENING";
 
   const animatedXpStyle = useAnimatedStyle(() => ({
     width: withTiming(`${Math.min(100, Math.max(0, xp))}%`, { duration: 800 }),
@@ -30,53 +19,51 @@ export default function Header({
 
   return (
     <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Text style={styles.greetingText}>{greeting}</Text>
-        <Text style={styles.petName}>{tamagotchi?.name} 🐾</Text>
+      <View style={styles.left}>
+        <Text variant="overline" color={c.textMuted}>{greeting}</Text>
+        <Text variant="display" color={c.text} style={styles.petName}>
+          {tamagotchi?.name} 🐾
+        </Text>
 
-        <View style={styles.levelContainer}>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelBadgeText}>Lv.{tamagotchi.level}</Text>
+        <View style={styles.levelRow}>
+          <View style={[styles.levelBadge, { backgroundColor: c.primary }]}>
+            <Text variant="data" color={c.onPrimary} style={styles.levelText}>
+              Lv.{tamagotchi?.level}
+            </Text>
           </View>
-          <View style={styles.xpTrack}>
-            <Animated.View
-              style={[
-                styles.xpFill,
-                animatedXpStyle,
-                { backgroundColor: "#32ADE6" },
-              ]}
-            />
+          <View style={[styles.xpTrack, { backgroundColor: c.surfaceSunken }]}>
+            <Animated.View style={[styles.xpFill, animatedXpStyle, { backgroundColor: c.primary }]} />
           </View>
         </View>
 
-        <TouchableOpacity style={styles.staminaContainer} onPress={onOpenStore}>
-          <Text style={styles.staminaLabel}>ACTIONS:</Text>
+        <TouchableOpacity style={[styles.staminaRow, { backgroundColor: c.surfaceSunken }]} onPress={onOpenStore}>
+          <Text variant="overline" color={c.textMuted} style={styles.staminaLabel}>ACTIONS</Text>
           {[...Array(MAX_STAMINA)].map((_, i) => (
             <MaterialCommunityIcons
               key={i}
               name="lightning-bolt"
               size={16}
-              color={i < stamina ? "#FF9500" : "rgba(0,0,0,0.1)"}
+              color={i < stamina ? c.accentStar : c.border}
             />
           ))}
           {stamina === 0 && (
-            <View style={styles.buyStaminaBadge}>
-              <Text style={styles.buyStaminaText}>+</Text>
+            <View style={[styles.miniBadge, { backgroundColor: c.danger }]}>
+              <Text variant="caption" color={c.onPrimary} weight="bold">+</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.headerRight} onPress={onOpenStore}>
-        <BlurView intensity={80} tint="light" style={styles.coinBadge}>
-          <MaterialCommunityIcons
-            name="star-four-points"
-            size={14}
-            color="#FF9500"
-          />
-          <Text style={styles.coinText}>{coins}</Text>
-          <View style={styles.plusBadge}>
-            <Text style={styles.plusText}>+</Text>
+      <TouchableOpacity style={styles.right} onPress={onOpenStore}>
+        <BlurView
+          intensity={80}
+          tint="light"
+          style={[styles.coinBadge, { borderColor: c.glassBorder }]}
+        >
+          <MaterialCommunityIcons name="star-four-points" size={14} color={c.accentStar} />
+          <Text variant="data" color={c.text} style={styles.coinText}>{coins}</Text>
+          <View style={[styles.miniBadge, { backgroundColor: c.primary }]}>
+            <Text variant="caption" color={c.onPrimary} weight="bold">+</Text>
           </View>
         </BlurView>
       </TouchableOpacity>
@@ -85,101 +72,36 @@ export default function Header({
 }
 
 const styles = StyleSheet.create({
-  header: {
-    marginTop: 60,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  headerLeft: { flex: 1 },
-  headerRight: { alignItems: "flex-end", gap: 12 },
-  greetingText: {
-    color: "rgba(60, 60, 67, 0.6)",
-    fontSize: 14,
-    textTransform: "uppercase",
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  petName: {
-    color: "#000",
-    fontSize: 36,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-    marginTop: 2,
-  },
-  levelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    gap: 8,
-  },
-  levelBadge: {
-    backgroundColor: "#000",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  levelBadgeText: { color: "#FFF", fontSize: 14, fontWeight: "700" },
-  xpTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: "rgba(0,0,0,0.06)",
-    borderRadius: 3,
-    maxWidth: 120,
-    overflow: "hidden",
-  },
+  header: { marginTop: 60, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  left: { flex: 1 },
+  right: { alignItems: "flex-end" },
+  petName: { marginTop: 2 },
+  levelRow: { flexDirection: "row", alignItems: "center", marginTop: Spacing.sm, gap: Spacing.sm },
+  levelBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.sm },
+  levelText: { fontSize: 13 },
+  xpTrack: { flex: 1, height: 6, borderRadius: 3, maxWidth: 120, overflow: "hidden" },
   xpFill: { height: "100%", borderRadius: 3 },
-  staminaContainer: {
+  staminaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
+    marginTop: Spacing.md,
     gap: 2,
-    padding: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.03)",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 5,
+    borderRadius: Radius.md,
+    alignSelf: "flex-start",
   },
-  staminaLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "rgba(60, 60, 67, 0.6)",
-    marginRight: 4,
-    marginLeft: 8,
-    letterSpacing: 1,
-  },
-  buyStaminaBadge: {
-    backgroundColor: "#FF3B30",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 4,
-  },
-  buyStaminaText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 14,
-  },
+  staminaLabel: { marginRight: Spacing.xs },
+  miniBadge: { minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, alignItems: "center", justifyContent: "center", marginLeft: Spacing.xs },
   coinBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.lg,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
     gap: 6,
   },
-  coinText: { color: "#1C1C1E", fontWeight: "700", fontSize: 14 },
-  plusBadge: {
-    backgroundColor: "#007AFF",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  plusText: { color: "#FFF", fontSize: 12, fontWeight: "900", lineHeight: 14 },
+  coinText: { fontSize: 14 },
 });

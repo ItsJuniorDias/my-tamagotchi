@@ -3,6 +3,7 @@ import { Modal, View, TouchableOpacity, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Text from "@/components/text";
+import { Colors, Radius, Spacing } from "@/constants/theme";
 
 export default function StoreModal({
   visible,
@@ -17,102 +18,72 @@ export default function StoreModal({
   onPurchase: (sku: string) => void;
   products: { productId: string; localizedPrice: string }[];
 }) {
+  const c = Colors;
+
   const getPrice = (id: string, fallback: string) =>
     products.find((p) => p.productId === id)?.localizedPrice || fallback;
 
+  const Row = ({ icon, tint, title, desc, onPress, price, primary }: any) => (
+    <TouchableOpacity
+      style={[styles.item, { backgroundColor: c.backgroundElevated, borderColor: c.border }]}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
+      <View style={[styles.itemIcon, { backgroundColor: tint + "26" }]}>
+        <MaterialCommunityIcons name={icon} size={26} color={tint} />
+      </View>
+      <View style={styles.itemInfo}>
+        <Text variant="heading" color={c.text} style={styles.itemTitle}>{title}</Text>
+        <Text variant="caption" color={c.textSecondary} weight="medium">{desc}</Text>
+      </View>
+      <View style={[styles.buyButton, { backgroundColor: primary ? c.primary : c.surfaceSunken }]}>
+        <Text variant="data" color={primary ? c.onPrimary : c.text} style={styles.buyText}>{price}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <BlurView intensity={90} tint="light" style={styles.storeContainer}>
-          <View style={styles.storeHeader}>
-            <Text style={styles.storeTitle} weight="bold">
-              Pet Store
-            </Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Feather name="x" size={24} color="#1C1C1E" />
+      <View style={[styles.overlay, { backgroundColor: c.overlay }]}>
+        <BlurView
+          intensity={90}
+          tint="light"
+          style={[styles.container, { backgroundColor: c.surfaceGlass }]}
+        >
+          <View style={styles.header}>
+            <Text variant="title" color={c.text}>Pet store</Text>
+            <TouchableOpacity onPress={onClose} style={[styles.close, { backgroundColor: c.surfaceSunken }]}>
+              <Feather name="x" size={22} color={c.text} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.storeItems}>
-            <TouchableOpacity style={styles.storeItem} onPress={onBuyStamina}>
-              <View
-                style={[
-                  styles.storeItemIcon,
-                  { backgroundColor: "rgba(255, 149, 0, 0.15)" },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="lightning-bolt"
-                  size={28}
-                  color="#FF9500"
-                />
-              </View>
-              <View style={styles.storeItemInfo}>
-                <Text style={styles.storeItemTitle}>Recharge Energy</Text>
-                <Text style={styles.storeItemDesc}>Refills your 5 actions</Text>
-              </View>
-              <View style={styles.buyButton}>
-                <Text style={styles.buyButtonText}>100 ⭐</Text>
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.storeItem}
+          <View style={styles.items}>
+            <Row
+              icon="lightning-bolt"
+              tint={c.accentStar}
+              title="Recharge energy"
+              desc="Refills your 5 actions"
+              price="100 ⭐"
+              onPress={onBuyStamina}
+            />
+            <Row
+              icon="star-four-points"
+              tint={c.stat.energy}
+              title="Basic pack"
+              desc="+500 stars"
+              primary
+              price={getPrice("com.tamagotchi.pacotebasico_500", "$4.99")}
               onPress={() => onPurchase("coin_500")}
-            >
-              <View
-                style={[
-                  styles.storeItemIcon,
-                  { backgroundColor: "rgba(52, 199, 89, 0.15)" },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="star-four-points"
-                  size={28}
-                  color="#34C759"
-                />
-              </View>
-
-              <View style={styles.storeItemInfo}>
-                <Text style={styles.storeItemTitle}>Basic Package</Text>
-                <Text style={styles.storeItemDesc}>+500 Stars</Text>
-              </View>
-
-              <View style={[styles.buyButton, { backgroundColor: "#007AFF" }]}>
-                <Text style={[styles.buyButtonText, { color: "#FFF" }]}>
-                  {getPrice("com.tamagotchi.pacotebasico_500", "$4.99")}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.storeItem}
+            />
+            <Row
+              icon="treasure-chest"
+              tint={c.primary}
+              title="Star chest"
+              desc="+1500 stars"
+              primary
+              price={getPrice("com.tamagotchi.bauestrelas_1500", "$9.99")}
               onPress={() => onPurchase("coin_1500")}
-            >
-              <View
-                style={[
-                  styles.storeItemIcon,
-                  { backgroundColor: "rgba(175, 82, 222, 0.15)" },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="treasure-chest"
-                  size={28}
-                  color="#AF52DE"
-                />
-              </View>
-              <View style={styles.storeItemInfo}>
-                <Text style={styles.storeItemTitle}>Star Chest</Text>
-                <Text style={styles.storeItemDesc}>+1500 Stars</Text>
-              </View>
-              <View style={[styles.buyButton, { backgroundColor: "#007AFF" }]}>
-                <Text style={[styles.buyButtonText, { color: "#FFF" }]}>
-                  {getPrice("com.tamagotchi.bauestrelas_1500", "$9.99")}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            />
           </View>
         </BlurView>
       </View>
@@ -121,73 +92,15 @@ export default function StoreModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  storeContainer: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    paddingBottom: 50,
-    overflow: "hidden",
-  },
-  storeHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  storeTitle: { fontSize: 24, fontWeight: "700", color: "#1C1C1E" },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.05)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  storeItems: { gap: 16 },
-  storeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
-  },
-  storeItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  storeItemInfo: { flex: 1 },
-  storeItemTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1C1C1E",
-    marginBottom: 4,
-  },
-  storeItemDesc: {
-    fontSize: 14,
-    color: "rgba(60, 60, 67, 0.6)",
-    fontWeight: "500",
-  },
-  buyButton: {
-    backgroundColor: "rgba(0,0,0,0.05)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  buyButtonText: { fontSize: 16, fontWeight: "700", color: "#1C1C1E" },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(0,0,0,0.05)",
-    marginVertical: 8,
-  },
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  container: { borderTopLeftRadius: Radius["3xl"], borderTopRightRadius: Radius["3xl"], padding: Spacing.xl, paddingBottom: 50, overflow: "hidden" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Spacing.xl },
+  close: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center" },
+  items: { gap: Spacing.md },
+  item: { flexDirection: "row", alignItems: "center", padding: Spacing.base, borderRadius: Radius["2xl"], borderWidth: 1 },
+  itemIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: "center", alignItems: "center", marginRight: Spacing.base },
+  itemInfo: { flex: 1 },
+  itemTitle: { marginBottom: 2 },
+  buyButton: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm, borderRadius: Radius.md },
+  buyText: { fontSize: 14 },
 });

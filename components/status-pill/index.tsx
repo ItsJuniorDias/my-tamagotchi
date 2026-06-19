@@ -2,65 +2,53 @@ import React from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
 import Text from "@/components/text";
+import { Colors, Radius, Spacing } from "@/constants/theme";
 
 const { width } = Dimensions.get("window");
 
-export default function StatusPill({ label, value, color, icon }) {
+export default function StatusPill({ label, value, color, icon }: any) {
+  const c = Colors;
+
   const animatedFillStyle = useAnimatedStyle(() => ({
-    width: withTiming(`${value}%`, { duration: 600 }),
+    width: withTiming(`${Math.max(0, Math.min(100, value))}%`, { duration: 600 }),
   }));
 
   return (
-    <BlurView intensity={60} tint="light" style={styles.pillContainer}>
-      <View style={styles.pillHeader}>
-        <MaterialCommunityIcons name={icon} size={16} color={color} />
-        <Text style={styles.pillValue}>{Math.round(value)}%</Text>
+    <BlurView
+      intensity={60}
+      tint="light"
+      style={[styles.pill, { borderColor: c.glassBorder, backgroundColor: c.surfaceGlass }]}
+    >
+      <View style={styles.head}>
+        <View style={[styles.iconChip, { backgroundColor: color + "26" }]}>
+          <MaterialCommunityIcons name={icon} size={15} color={color} />
+        </View>
+        <Text variant="data" color={c.text} style={styles.value}>{Math.round(value)}%</Text>
       </View>
-      <View style={styles.pillTrack}>
-        <Animated.View
-          style={[
-            styles.pillFill,
-            { backgroundColor: color },
-            animatedFillStyle,
-          ]}
-        />
+      <View style={[styles.track, { backgroundColor: c.surfaceSunken }]}>
+        <Animated.View style={[styles.fill, { backgroundColor: color }, animatedFillStyle]} />
       </View>
-      <Text style={styles.pillLabel}>{label}</Text>
+      <Text variant="caption" color={c.textSecondary} weight="semibold" style={styles.label}>
+        {label}
+      </Text>
     </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
-  pillContainer: {
+  pill: {
     width: (width - 60) / 2,
-    padding: 14,
-    borderRadius: 20,
+    padding: Spacing.base,
+    borderRadius: Radius.xl,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
   },
-  pillHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  pillTrack: {
-    height: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.08)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  pillFill: { height: "100%", borderRadius: 2 },
-  pillLabel: {
-    color: "rgba(60, 60, 67, 0.6)",
-    fontSize: 14,
-    marginTop: 8,
-    fontWeight: "600",
-  },
-  pillValue: { color: "#1C1C1E", fontWeight: "700", fontSize: 14 },
+  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: Spacing.md },
+  iconChip: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  value: { fontSize: 14 },
+  track: { height: 5, borderRadius: 3, overflow: "hidden" },
+  fill: { height: "100%", borderRadius: 3 },
+  label: { marginTop: Spacing.sm },
 });

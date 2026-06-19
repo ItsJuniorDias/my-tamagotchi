@@ -2,9 +2,10 @@ import { FloatingImages } from "@/components/floating-image";
 import { IncubatingView } from "@/components/incubating-view";
 import { PetProfile } from "@/components/pet-profile";
 import { SwipeToStart } from "@/components/swipe-to-start";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Text from "@/components/text";
+import { Colors, Gradients, Spacing } from "@/constants/theme";
+import { ANIMAL_EVOLUTION_ORDER, STORAGE_KEY } from "@/constants/gameConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -14,39 +15,27 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Text,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-url-polyfill/auto";
 
-const STORAGE_KEY = "@my_tamagotchi_data_v5";
+const TRAIT_POOL = ["Playful", "Curious", "Loyal", "Brave", "Sleepy", "Smart", "Gentle", "Bold"];
 
-// Instância do Gemini
-const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GOOGLE_API_KEY);
+function rollTraits(count = 3) {
+  return [...TRAIT_POOL].sort(() => 0.5 - Math.random()).slice(0, count);
+}
 
-const ANIMAL_EVOLUTION_ORDER = [
-  "Duck",
-  "Flamingo",
-  "Parrot",
-  "Stork",
-  "Fox",
-  "Pinguin",
-  "Wolf",
-  "Horse",
-  "Cat",
-  "Tiger",
-  "BlackWolf",
-  "Demon",
-  "Spider",
-  "TRex",
-  "Dragon",
-];
+function petTypeForLevel(level: number) {
+  const i = Math.min(Math.max(level - 1, 0), ANIMAL_EVOLUTION_ORDER.length - 1);
+  return ANIMAL_EVOLUTION_ORDER[i];
+}
 
 export default function App() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [tamagotchi, setTamagotchi] = useState(null);
+  const c = Colors;
+
+  const [isHatching, setIsHatching] = useState(false);
+  const [tamagotchi, setTamagotchi] = useState<any>(null);
   const [showHome, setShowHome] = useState(false);
   const [petName, setPetName] = useState("");
 
@@ -61,163 +50,85 @@ export default function App() {
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData !== null) {
         const parsedData = JSON.parse(savedData);
-
-        const currentPet = parsedData.tamagotchi
-          ? parsedData.tamagotchi
-          : parsedData;
-
+        const currentPet = parsedData.tamagotchi ?? parsedData;
         setTamagotchi(currentPet);
         setPetName(currentPet.name || "Bubbles");
-
-        // Se já existe um pet, pula a tela de introdução
-        setShowHome(true);
+        setShowHome(true); // skip intro when a pet already exists
       }
     } catch (e) {
       console.error("Failed to load tamagotchi", e);
     }
   };
 
-  const saveTamagotchi = async (data) => {
+  const saveTamagotchi = async (pet: any) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ tamagotchi: pet }));
     } catch (e) {
       console.error("Failed to save tamagotchi", e);
     }
   };
 
+  // Create / re-roll a pet locally — no external image generation.
+  const hatchPet = async () => {
+    setIsHatching(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const level = tamagotchi?.level || 1;
+    const newPet = {
+      ...tamagotchi,
+      type: petTypeForLevel(level),
+      level,
+      name: petName || tamagotchi?.name || "Bubbles",
+      traits: rollTraits(),
+      energy: Math.floor(Math.random() * 41) + 60, // 60–100
+    };
+
+    // Short, satisfying "incubation" beat before revealing the pet.
+    setTimeout(async () => {
+      setTamagotchi(newPet);
+      await saveTamagotchi(newPet);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setIsHatching(false);
+    }, 1100);
+  };
+
+  const handleStart = () => {
+    setShowHome(true);
+    if (!tamagotchi) hatchPet();
+    else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   const handleStartJourney = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     if (tamagotchi) {
       const finalName = petName.trim() === "" ? "Bubbles" : petName.trim();
       const updatedPet = { ...tamagotchi, name: finalName };
-
       try {
         const savedString = await AsyncStorage.getItem(STORAGE_KEY);
-        let fullData = savedString ? JSON.parse(savedString) : {};
-
-        fullData = { ...fullData, tamagotchi: updatedPet };
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(fullData));
-
+        const fullData = savedString ? JSON.parse(savedString) : {};
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ ...fullData, tamagotchi: updatedPet }),
+        );
         setTamagotchi(updatedPet);
       } catch (e) {
         console.error("Failed to save name", e);
       }
     }
-
     router.push("/(home)");
   };
 
-  const generateTamagotchiIcon = async () => {
-    setIsGenerating(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    try {
-      const geminiImage = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-image",
-      });
-
-      const currentLevel = tamagotchi?.level || 1;
-      const animalIndex = Math.min(
-        currentLevel - 1,
-        ANIMAL_EVOLUTION_ORDER.length - 1,
-      );
-      const targetAnimal = ANIMAL_EVOLUTION_ORDER[animalIndex];
-
-      const appleStylePrompt = `A cute 3D face of a ${targetAnimal}, in the exact style of Apple iOS Memoji and Animoji. Clean minimalist white background, soft studio lighting, high resolution, glossy finish, adorable, highly detailed 3D render.`;
-
-      const storyImageResult = await geminiImage.generateContent({
-        contents: [{ role: "user", parts: [{ text: appleStylePrompt }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-      });
-
-      const storyImagePart =
-        storyImageResult?.response?.candidates[0]?.content.parts.find(
-          (p) => p.inlineData,
-        );
-
-      if (storyImagePart) {
-        const permanentUrl = await uploadGeminiToCloudinary(
-          storyImagePart?.inlineData?.data,
-        );
-
-        const possibleTraits = [
-          "Playful",
-          "Curious",
-          "Loyal",
-          "Brave",
-          "Sleepy",
-          "Smart",
-        ];
-        const traits = possibleTraits
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3);
-
-        const newPet = {
-          ...tamagotchi,
-          url: permanentUrl,
-          type: targetAnimal,
-          level: currentLevel,
-          name: petName || tamagotchi?.name || "Bubbles",
-          traits: traits,
-          energy: Math.floor(Math.random() * (100 - 60 + 1)) + 60,
-        };
-
-        setTamagotchi(newPet);
-        await saveTamagotchi({ tamagotchi: newPet });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } catch (error) {
-      console.error("Error generating:", error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const uploadGeminiToCloudinary = async (base64String) => {
-    const CLOUD_NAME = "dqvujibkn";
-    const UPLOAD_PRESET = "ai-generated-images";
-    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-
-    const formData = new FormData();
-    formData.append("file", `data:image/png;base64,${base64String}`);
-    formData.append("upload_preset", UPLOAD_PRESET);
-
-    try {
-      const response = await fetch(url, { method: "POST", body: formData });
-      const data = await response.json();
-      return data.secure_url;
-    } catch (err) {
-      console.error("Cloudinary Error:", err);
-    }
-  };
-
-  const handleStart = () => {
-    if (!tamagotchi) {
-      setShowHome(true);
-      generateTamagotchiIcon();
-    } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setShowHome(true);
-    }
-  };
-
-  // Envolvemos todo o retorno com o GestureHandlerRootView
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       {showHome ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={[styles.container, styles.centerContainer]}
+          style={[styles.container, styles.center]}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.innerKeyboardContainer}>
-              <LinearGradient
-                colors={["#EAEAF2", "#F2F2F7", "#D1D1D6"]}
-                style={StyleSheet.absoluteFill}
-              />
-              {isGenerating ? (
+            <View style={styles.inner}>
+              <LinearGradient colors={Gradients.hatch} style={StyleSheet.absoluteFill} />
+              {isHatching ? (
                 <IncubatingView />
               ) : (
                 <PetProfile
@@ -225,23 +136,25 @@ export default function App() {
                   petName={petName}
                   setPetName={setPetName}
                   onStartJourney={handleStartJourney}
-                  onReroll={generateTamagotchiIcon}
+                  onReroll={hatchPet}
                 />
               )}
             </View>
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       ) : (
-        <View style={styles.container}>
-          <LinearGradient
-            colors={["#F2F2F7", "#FFFFFF", "#F2F2F7"]}
-            style={StyleSheet.absoluteFill}
-          />
+        <View style={[styles.container, { backgroundColor: c.background }]}>
+          <LinearGradient colors={Gradients.app} style={StyleSheet.absoluteFill} />
           <FloatingImages />
           <View style={styles.textContainer}>
-            <Text style={styles.titleMain}>Tamagotchi</Text>
-            <Text style={styles.subtitleMain}>
-              Your next-generation virtual{"\n"}companion is waiting.
+            <Text variant="overline" color={c.primary} style={styles.eyebrow}>
+              VIRTUAL CREATURE LAB
+            </Text>
+            <Text variant="hero" color={c.text} style={styles.titleMain}>
+              Tamagotchi
+            </Text>
+            <Text variant="bodyLg" color={c.textSecondary} style={styles.subtitleMain}>
+              Hatch, raise and evolve your own{"\n"}pocket companion.
             </Text>
           </View>
           <SwipeToStart onStart={handleStart} />
@@ -252,35 +165,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  centerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  innerKeyboardContainer: {
-    flex: 1,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textContainer: {
-    top: 40,
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 60,
-  },
-  titleMain: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#333333",
-    marginBottom: 12,
-  },
-  subtitleMain: {
-    fontSize: 18,
-    color: "#666666",
-    textAlign: "center",
-  },
+  container: { flex: 1 },
+  center: { alignItems: "center", justifyContent: "center" },
+  inner: { flex: 1, width: "100%", alignItems: "center", justifyContent: "center" },
+  textContainer: { top: 40, alignItems: "center", paddingHorizontal: Spacing.lg, marginBottom: 60 },
+  eyebrow: { marginBottom: Spacing.sm },
+  titleMain: { marginBottom: Spacing.md, textAlign: "center" },
+  subtitleMain: { textAlign: "center" },
 });

@@ -29,6 +29,8 @@ import Pet3DViewer from "../../components/pet-3d";
 import ActionDock from "../../components/action-dock";
 import StoreModal from "../../components/store-modal";
 
+import { Colors, Gradients } from "@/constants/theme";
+
 const STAT_DECAY_INTERVAL = 60000;
 
 Notifications.setNotificationHandler({
@@ -42,6 +44,8 @@ Notifications.setNotificationHandler({
 });
 
 export default function HomeScreen() {
+  const c = Colors;
+
   const [hunger, setHunger] = useState(60);
   const [happiness, setHappiness] = useState(40);
   const [energy, setEnergy] = useState(90);
@@ -395,10 +399,10 @@ export default function HomeScreen() {
   ).current;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       <RNStatusBar barStyle="dark-content" />
       <LinearGradient
-        colors={["#E8E8ED", "#F2F2F7"]}
+        colors={Gradients.app}
         style={StyleSheet.absoluteFill}
       />
 
@@ -414,25 +418,25 @@ export default function HomeScreen() {
         <StatusPill
           label="Hunger"
           value={hunger}
-          color="#FF3B30"
+          color={c.stat.hunger}
           icon="food-apple"
         />
         <StatusPill
           label="Mood"
           value={happiness}
-          color="#FF9500"
+          color={c.stat.mood}
           icon="emoticon-happy"
         />
         <StatusPill
           label="Energy"
           value={energy}
-          color="#34C759"
+          color={c.stat.energy}
           icon="lightning-bolt"
         />
         <StatusPill
           label="Hygiene"
           value={hygiene}
-          color="#007AFF"
+          color={c.stat.hygiene}
           icon="shower"
         />
       </View>

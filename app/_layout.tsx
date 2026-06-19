@@ -1,9 +1,5 @@
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import { Colors } from "@/constants/theme";
+import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -11,8 +7,26 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
+
+// — Design-system typefaces ———————————————————————————————————
+import {
+  Fredoka_400Regular,
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from "@expo-google-fonts/fredoka";
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from "@expo-google-fonts/plus-jakarta-sans";
+import {
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
+} from "@expo-google-fonts/space-mono";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,67 +35,55 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   const [loaded, error] = useFonts({
-    "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
-    "Roboto-Bold": require("../assets/fonts/Roboto-Bold.ttf"),
-    "Roboto-Semibold": require("../assets/fonts/Roboto-SemiBold.ttf"),
+    Fredoka_400Regular,
+    Fredoka_500Medium,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
   });
 
-  // 1. CORREÇÃO: Apenas registre o erro em produção, não dê throw.
+  // Log font errors instead of throwing, so the app still boots with system fonts.
   useEffect(() => {
-    if (error) {
-      console.error("Erro ao carregar fontes:", error);
-      // Opcional: Você pode reportar isso para um serviço como Sentry/Crashlytics aqui
-    }
+    if (error) console.error("Failed to load fonts:", error);
   }, [error]);
 
   useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
+    if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
 
+  // RevenueCat — configure only when an API key is present.
   useEffect(() => {
-    // 2. CORREÇÃO: Configuração segura do RevenueCat
-    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-
+    if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
     const iosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
-
     if (Platform.OS === "ios") {
-      if (iosApiKey) {
-        Purchases.configure({ apiKey: iosApiKey });
-      } else {
-        // Se a chave não existir, registramos o erro em vez de crashar
-        console.warn(
-          "RevenueCat: Chave iOS não encontrada nas variáveis de ambiente.",
-        );
-      }
+      if (iosApiKey) Purchases.configure({ apiKey: iosApiKey });
+      else console.warn("RevenueCat: missing EXPO_PUBLIC_REVENUECAT_IOS_KEY.");
     }
   }, []);
 
-  if (!loaded && !error) {
-    return null;
-  }
+  if (!loaded && !error) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={DefaultTheme}>
         <Stack
           screenOptions={{
             headerShown: false,
             animation: "fade_from_bottom",
-            contentStyle: {
-              backgroundColor: colorScheme === "dark" ? "#000" : "#FFF",
-            },
+            contentStyle: { backgroundColor: Colors.background },
           }}
         >
           <Stack.Screen name="(app)/index" />
           <Stack.Screen name="(home)/index" />
         </Stack>
-
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+        <StatusBar style="dark" />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

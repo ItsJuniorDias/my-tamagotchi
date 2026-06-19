@@ -112,7 +112,7 @@ const LoadingHologram = () => {
     <mesh ref={meshRef}>
       <icosahedronGeometry args={[0.5, 1]} />
       <meshPhysicalMaterial
-        color="#007AFF"
+        color="#6D4AFF"
         wireframe
         transparent
         opacity={0.3}
