@@ -97,12 +97,22 @@ export function PetProfile({ tamagotchi, petName, setPetName, onStartJourney, on
             activeOpacity={0.85}
             onPress={onStartJourney}
             style={[styles.primaryButton, { backgroundColor: c.primary }, Shadows.glow(c.primary)]}
+            accessibilityRole="button"
+            accessibilityLabel="Start journey"
+            accessibilityHint={`Enter the game with your ${tamagotchi?.type ?? "pet"}`}
           >
             <Text variant="button" color={c.onPrimary}>Start journey</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.6} onPress={onReroll} style={styles.rerollButton}>
-            <Feather name="refresh-cw" size={14} color={c.textMuted} />
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={onReroll}
+            style={styles.rerollButton}
+            accessibilityRole="button"
+            accessibilityLabel="Hatch a different pet"
+            accessibilityHint="Rolls a new random pet type and traits"
+          >
+            <Feather name="refresh-cw" size={14} color={c.textMuted} importantForAccessibility="no" />
             <Text variant="label" color={c.textMuted} weight="medium">Hatch a different pet</Text>
           </TouchableOpacity>
         </View>

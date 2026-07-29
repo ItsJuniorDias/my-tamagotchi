@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
-import Purchases from "react-native-purchases"; // Importando apenas o RevenueCat
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import Purchases from "react-native-purchases";
 
 import {
   Alert,
@@ -10,19 +10,25 @@ import {
   StatusBar as RNStatusBar,
   StyleSheet,
   View,
-  Platform,
 } from "react-native";
 import * as Notifications from "expo-notifications";
+import { SchedulableTriggerInputTypes } from "expo-notifications";
 
-// Constantes e Configurações (removido itemSKUs, o RevenueCat gerencia isso no painel)
 import {
   STORAGE_KEY,
+  LEGACY_STORAGE_KEY,
+  FIRST_TIME_OFFER_KEY,
   MAX_STAMINA,
   STAMINA_RECHARGE_TIME,
   ANIMAL_EVOLUTION_ORDER,
+  STARTER_COINS,
+  INITIAL_STATS,
+  ACTION_COSTS,
+  STAMINA_REFILL_COST,
+  LOW_STAT_THRESHOLD,
+  STAR_PACKS,
 } from "../../constants/gameConfig";
 
-// Componentes
 import Header from "../../components/header";
 import StatusPill from "../../components/status-pill";
 import Pet3DViewer from "../../components/pet-3d";
@@ -43,19 +49,23 @@ Notifications.setNotificationHandler({
   }),
 });
 
+type ActionType = keyof typeof ACTION_COSTS;
+
 export default function HomeScreen() {
   const c = Colors;
 
-  const [hunger, setHunger] = useState(60);
-  const [happiness, setHappiness] = useState(40);
-  const [energy, setEnergy] = useState(90);
-  const [hygiene, setHygiene] = useState(100);
-  const [coins, setCoins] = useState(250);
+  // ─── State ────────────────────────────────────────────────
+  const [hunger, setHunger] = useState(INITIAL_STATS.hunger);
+  const [happiness, setHappiness] = useState(INITIAL_STATS.happiness);
+  const [energy, setEnergy] = useState(INITIAL_STATS.energy);
+  const [hygiene, setHygiene] = useState(INITIAL_STATS.hygiene);
+  const [coins, setCoins] = useState(STARTER_COINS);
   const [xp, setXp] = useState(0);
   const [stamina, setStamina] = useState(MAX_STAMINA);
   const [isStoreVisible, setIsStoreVisible] = useState(false);
-  const [products, setProducts] = useState<any[]>([]); // Pacotes (Packages) do RevenueCat
-  const [isPro, setIsPro] = useState(false); // Novo estado para controlar assinatura
+  const [products, setProducts] = useState<any[]>([]);
+  const [isPro, setIsPro] = useState(false);
+  const [hasSeenFirstOffer, setHasSeenFirstOffer] = useState(true); // default true = don't show until we confirm
 
   const [tamagotchi, setTamagotchi] = useState({
     type: ANIMAL_EVOLUTION_ORDER?.[0] || "DefaultPet",
@@ -68,135 +78,162 @@ export default function HomeScreen() {
   const startRotationY = useRef(0);
   const startRotationX = useRef(0);
 
-  // --- Efeitos de Permissão e Notificação ---
-  useEffect(() => {
-    async function requestPermissions() {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+  // Track whether we've already nudged the user for low stats this session
+  // (avoid notification spam).
+  const lowStatNudgedRef = useRef(false);
 
-      if (existingStatus !== "granted") {
+  // ─── Notifications: permissions ───────────────────────────
+  useEffect(() => {
+    (async () => {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let final = existing;
+      if (existing !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
+        final = status;
       }
-      if (finalStatus !== "granted")
-        console.log("Notification permission denied!");
-    }
-    requestPermissions();
+      if (final !== "granted") console.log("Notification permission denied");
+    })();
   }, []);
 
+  // ─── Notifications: schedule engagement pings ─────────────
+  // - stamina-full ping (existing)
+  // - low-stat ping when any stat drops below threshold (new)
   useEffect(() => {
-    const scheduleStaminaNotification = async () => {
+    const schedule = async () => {
       await Notifications.cancelAllScheduledNotificationsAsync();
-      if (stamina < MAX_STAMINA && STAMINA_RECHARGE_TIME > 0) {
-        const missingStamina = MAX_STAMINA - stamina;
-        const timeToFullSeconds =
-          (missingStamina * STAMINA_RECHARGE_TIME) / 1000;
 
+      // Stamina-full ping
+      if (stamina < MAX_STAMINA && STAMINA_RECHARGE_TIME > 0) {
+        const missing = MAX_STAMINA - stamina;
+        const seconds = (missing * STAMINA_RECHARGE_TIME) / 1000;
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "Energy full! ⚡",
-            body: `${tamagotchi?.name || "Your pet"} has rested and has ${MAX_STAMINA} actions available. Come play!`,
+            body: `${tamagotchi?.name || "Your pet"} is ready to play again — ${MAX_STAMINA} actions waiting.`,
             sound: true,
           },
           trigger: {
-            type: "timeInterval",
+            type: SchedulableTriggerInputTypes.TIME_INTERVAL,
             channelId: "stamina-recharge",
-            seconds: timeToFullSeconds,
+            seconds,
+            repeats: false,
+          },
+        });
+      }
+
+      // Low-stat ping — fires 2 hours after any stat is critically low
+      const lowest = Math.min(hunger, happiness, energy, hygiene);
+      if (lowest < LOW_STAT_THRESHOLD) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `${tamagotchi?.name || "Your pet"} needs you 🥺`,
+            body: "Some stats are getting low — pop back in to check on them.",
+            sound: true,
+          },
+          trigger: {
+            type: SchedulableTriggerInputTypes.TIME_INTERVAL,
+            channelId: "stamina-recharge",
+            seconds: 2 * 60 * 60, // 2h
             repeats: false,
           },
         });
       }
     };
-    scheduleStaminaNotification();
-  }, [stamina, tamagotchi?.name]);
+    schedule();
+  }, [stamina, hunger, happiness, energy, hygiene, tamagotchi?.name]);
 
-  // --- REVENUECAT: Buscar Ofertas e Status do Usuário ---
+  // ─── RevenueCat: fetch offerings ──────────────────────────
   useEffect(() => {
-    const fetchRevenueCatData = async () => {
+    (async () => {
       try {
-        // 2. Busca os pacotes configurados no painel do RevenueCat
         const offerings = await Purchases.getOfferings();
-
-        console.log("Dados do RevenueCat carregados:", offerings);
-
         if (
           offerings.current !== null &&
           offerings.current.availablePackages.length !== 0
         ) {
-          console.log(
-            "Pacotes carregados do RevenueCat:",
-            offerings.current.availablePackages,
-          );
           setProducts(offerings.current.availablePackages);
         }
       } catch (err) {
-        console.warn("Erro ao comunicar com RevenueCat:", err);
+        console.warn("RevenueCat error:", err);
       }
-    };
-
-    fetchRevenueCatData();
+    })();
   }, []);
 
-  // --- AsyncStorage: Carregamento e Decaimento Offline ---
+  // ─── First-time offer flag ────────────────────────────────
   useEffect(() => {
-    const getAsyncStorage = async () => {
+    (async () => {
       try {
-        const storedData = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          if (parsedData.tamagotchi) setTamagotchi(parsedData.tamagotchi);
-          if (parsedData.xp !== undefined) setXp(parsedData.xp);
-          if (parsedData.coins !== undefined) setCoins(parsedData.coins);
+        const seen = await AsyncStorage.getItem(FIRST_TIME_OFFER_KEY);
+        setHasSeenFirstOffer(seen === "true");
+      } catch {
+        setHasSeenFirstOffer(false);
+      }
+    })();
+  }, []);
 
-          if (parsedData.lastSavedTime) {
-            const timePassed = Date.now() - parsedData.lastSavedTime;
-            const decayTicks =
-              STAT_DECAY_INTERVAL > 0
-                ? Math.floor(timePassed / STAT_DECAY_INTERVAL)
-                : 0;
+  // ─── AsyncStorage: load + offline decay (with v5→v6 migration) ────
+  useEffect(() => {
+    (async () => {
+      try {
+        let stored = await AsyncStorage.getItem(STORAGE_KEY);
 
-            if (parsedData.stamina !== undefined) {
-              const staminaToRecover =
-                STAMINA_RECHARGE_TIME > 0
-                  ? Math.floor(timePassed / STAMINA_RECHARGE_TIME)
-                  : 0;
-              setStamina(
-                Math.min(MAX_STAMINA, parsedData.stamina + staminaToRecover),
-              );
-            }
-
-            if (parsedData.hunger !== undefined)
-              setHunger(Math.max(0, parsedData.hunger - decayTicks));
-            if (parsedData.happiness !== undefined)
-              setHappiness(Math.max(0, parsedData.happiness - decayTicks));
-            if (parsedData.energy !== undefined)
-              setEnergy(Math.max(0, parsedData.energy - decayTicks));
-            if (parsedData.hygiene !== undefined)
-              setHygiene(Math.max(0, parsedData.hygiene - decayTicks));
-          } else {
-            if (parsedData.hunger !== undefined) setHunger(parsedData.hunger);
-            if (parsedData.happiness !== undefined)
-              setHappiness(parsedData.happiness);
-            if (parsedData.energy !== undefined) setEnergy(parsedData.energy);
-            if (parsedData.hygiene !== undefined)
-              setHygiene(parsedData.hygiene);
-            if (parsedData.stamina !== undefined)
-              setStamina(parsedData.stamina);
+        // Migrate v5 users: read their old data, seed v6, delete v5 key.
+        if (!stored) {
+          const legacy = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
+          if (legacy) {
+            await AsyncStorage.setItem(STORAGE_KEY, legacy);
+            await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+            stored = legacy;
           }
+        }
+
+        if (!stored) return;
+
+        const parsed = JSON.parse(stored);
+        if (parsed.tamagotchi) setTamagotchi(parsed.tamagotchi);
+        if (parsed.xp !== undefined) setXp(parsed.xp);
+        if (parsed.coins !== undefined) setCoins(parsed.coins);
+
+        if (parsed.lastSavedTime) {
+          const timePassed = Date.now() - parsed.lastSavedTime;
+          const decayTicks =
+            STAT_DECAY_INTERVAL > 0
+              ? Math.floor(timePassed / STAT_DECAY_INTERVAL)
+              : 0;
+
+          if (parsed.stamina !== undefined) {
+            const recover =
+              STAMINA_RECHARGE_TIME > 0
+                ? Math.floor(timePassed / STAMINA_RECHARGE_TIME)
+                : 0;
+            setStamina(Math.min(MAX_STAMINA, parsed.stamina + recover));
+          }
+          if (parsed.hunger !== undefined)
+            setHunger(Math.max(0, parsed.hunger - decayTicks));
+          if (parsed.happiness !== undefined)
+            setHappiness(Math.max(0, parsed.happiness - decayTicks));
+          if (parsed.energy !== undefined)
+            setEnergy(Math.max(0, parsed.energy - decayTicks));
+          if (parsed.hygiene !== undefined)
+            setHygiene(Math.max(0, parsed.hygiene - decayTicks));
+        } else {
+          if (parsed.hunger !== undefined) setHunger(parsed.hunger);
+          if (parsed.happiness !== undefined) setHappiness(parsed.happiness);
+          if (parsed.energy !== undefined) setEnergy(parsed.energy);
+          if (parsed.hygiene !== undefined) setHygiene(parsed.hygiene);
+          if (parsed.stamina !== undefined) setStamina(parsed.stamina);
         }
       } catch (error) {
         console.error("Error loading data", error);
       }
-    };
-    getAsyncStorage();
+    })();
   }, []);
 
-  // --- AsyncStorage: Salvamento ---
+  // ─── AsyncStorage: persist ────────────────────────────────
   useEffect(() => {
-    const saveData = async () => {
+    (async () => {
       try {
-        const dataToSave = {
+        const data = {
           tamagotchi,
           hunger,
           happiness,
@@ -207,15 +244,14 @@ export default function HomeScreen() {
           stamina,
           lastSavedTime: Date.now(),
         };
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch (error) {
         console.error("Error saving data", error);
       }
-    };
-    saveData();
+    })();
   }, [tamagotchi, hunger, happiness, energy, hygiene, xp, coins, stamina]);
 
-  // --- Intervalos de Tempo Ativos ---
+  // ─── Active intervals ─────────────────────────────────────
   useEffect(() => {
     const staminaInterval = setInterval(() => {
       setStamina((prev) => (prev < MAX_STAMINA ? prev + 1 : prev));
@@ -234,7 +270,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // --- Lógica de Evolução ---
+  // ─── Evolution ────────────────────────────────────────────
   useEffect(() => {
     if (xp >= 100) {
       if (tamagotchi.level >= 7) {
@@ -254,7 +290,9 @@ export default function HomeScreen() {
         type: nextAnimal,
       }));
       setXp((prev) => prev - 100);
-      setCoins((prev) => prev + 100);
+      // Evolution rewards a small XP bounty, NOT a big coin injection —
+      // resetting balance to zero-ish keeps the paywall pressure on.
+      setCoins((prev) => prev + 25);
 
       Alert.alert(
         "🎉 Evolution!",
@@ -265,76 +303,79 @@ export default function HomeScreen() {
     }
   }, [xp, tamagotchi.level, tamagotchi.type]);
 
-  // --- Interações do Jogo ---
-  const handleAction = (type) => {
-    const actionConfig = {
-      feed: { staminaCost: 1, coinCost: 10, hungerGained: 15, xpGained: 5 },
-      clean: { staminaCost: 1, coinCost: 2, hygieneGained: 40, xpGained: 4 },
-      play: {
-        staminaCost: 1,
-        coinCost: 5,
-        happinessGained: 15,
-        energyLost: 10,
-        hygieneLost: 15,
-        xpGained: 8,
-      },
-      sleep: { staminaCost: 1, coinCost: 0, energyGained: 25, xpGained: 4 },
-    };
+  // ─── First-time offer surfacing ───────────────────────────
+  const openStore = useCallback(() => {
+    setIsStoreVisible(true);
+  }, []);
 
-    const action = actionConfig[type];
-    if (!action) return;
+  const dismissFirstOffer = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(FIRST_TIME_OFFER_KEY, "true");
+    } catch {}
+    setHasSeenFirstOffer(true);
+  }, []);
 
-    if (stamina < action.staminaCost) {
+  // ─── Action gains (structured for clarity) ────────────────
+  const ACTION_GAINS: Record<
+    ActionType,
+    {
+      hungerGained?: number;
+      happinessGained?: number;
+      energyGained?: number;
+      energyLost?: number;
+      hygieneGained?: number;
+      hygieneLost?: number;
+      xpGained: number;
+    }
+  > = {
+    feed: { hungerGained: 20, xpGained: 6 },
+    clean: { hygieneGained: 40, xpGained: 4 },
+    play: { happinessGained: 20, energyLost: 8, hygieneLost: 10, xpGained: 8 },
+    sleep: { energyGained: 30, xpGained: 4 },
+  };
+
+  const handleAction = (type: ActionType) => {
+    const cost = ACTION_COSTS[type];
+    const gain = ACTION_GAINS[type];
+    if (cost === undefined || !gain) return;
+
+    if (stamina < 1) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setIsStoreVisible(true);
+      openStore();
       return;
     }
-
-    if (coins < action.coinCost) {
+    if (coins < cost) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Out of Stars ⭐",
-        "You need to buy more stars in the store!",
-      );
-      setIsStoreVisible(true);
+      // Skip the alert — the store opening IS the feedback.
+      openStore();
       return;
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setStamina((prev) => prev - action.staminaCost);
-    setCoins((prev) => prev - action.coinCost);
+    setStamina((prev) => prev - 1);
+    setCoins((prev) => prev - cost);
 
-    if (type === "feed") {
-      setHunger((prev) => Math.min(100, prev + action.hungerGained));
-      setXp((prev) => prev + action.xpGained);
-    }
-    if (type === "clean") {
-      setHygiene((prev) => Math.min(100, prev + action.hygieneGained));
-      setXp((prev) => prev + action.xpGained);
-    }
-    if (type === "play") {
-      setHappiness((prev) => Math.min(100, prev + action.happinessGained));
-      setEnergy((prev) => Math.max(0, prev - action.energyLost));
-      setHygiene((prev) => Math.max(0, prev - action.hygieneLost));
-      setXp((prev) => prev + action.xpGained);
-    }
-    if (type === "sleep") {
-      setEnergy((prev) => Math.min(100, prev + action.energyGained));
-      setXp((prev) => prev + action.xpGained);
-    }
+    if (gain.hungerGained !== undefined)
+      setHunger((prev) => Math.min(100, prev + gain.hungerGained!));
+    if (gain.happinessGained !== undefined)
+      setHappiness((prev) => Math.min(100, prev + gain.happinessGained!));
+    if (gain.energyGained !== undefined)
+      setEnergy((prev) => Math.min(100, prev + gain.energyGained!));
+    if (gain.energyLost !== undefined)
+      setEnergy((prev) => Math.max(0, prev - gain.energyLost!));
+    if (gain.hygieneGained !== undefined)
+      setHygiene((prev) => Math.min(100, prev + gain.hygieneGained!));
+    if (gain.hygieneLost !== undefined)
+      setHygiene((prev) => Math.max(0, prev - gain.hygieneLost!));
+    setXp((prev) => prev + gain.xpGained);
   };
 
-  // --- REVENUECAT: Realizar Compra ---
+  // ─── RevenueCat: purchase ─────────────────────────────────
   const handlePurchase = async (productId: string) => {
-    console.log("Iniciando compra do produto:", productId);
-
-    // O modal manda o ID do produto da App Store; achamos o Package correspondente.
     const packageToBuy = products.find(
       (p) => p?.product?.identifier === productId,
     );
-
     if (!packageToBuy) {
-      // Sem pacote = SDK não configurado ou Offering vazio no painel do RevenueCat.
       Alert.alert(
         "Store unavailable",
         "Purchases aren't available right now. Please try again later.",
@@ -344,21 +385,17 @@ export default function HomeScreen() {
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // O RevenueCat já lida com todo o fluxo transacional nativo
       const { customerInfo, productIdentifier } =
         await Purchases.purchasePackage(packageToBuy);
 
-      console.log("Compra realizada!", productIdentifier);
-
-      // 1. Verifica se foi uma compra de consumível (Estrelas)
-      if (productIdentifier === "com.tamagotchi.pacotebasico_500") {
-        setCoins((prev) => prev + 500);
-      } else if (productIdentifier === "com.tamagotchi.bauestrelas_1500") {
-        setCoins((prev) => prev + 1500);
+      // Match against the STAR_PACKS registry — single source of truth.
+      const pack = Object.values(STAR_PACKS).find(
+        (p) => p.id === productIdentifier,
+      );
+      if (pack) {
+        setCoins((prev) => prev + pack.coins);
       }
 
-      // 2. Verifica se foi a compra de Assinatura (Entitlement "Pro")
       if (
         typeof customerInfo.entitlements.active["My Tamagotchi Pro"] !==
         "undefined"
@@ -366,34 +403,37 @@ export default function HomeScreen() {
         setIsPro(true);
       }
 
+      // If this was the first-ever purchase, mark the offer flag so we
+      // don't badge it as "first-time" forever.
+      if (!hasSeenFirstOffer) await dismissFirstOffer();
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success!", "Purchase completed successfully.");
       setIsStoreVisible(false);
     } catch (err: any) {
       if (!err?.userCancelled) {
-        console.error("Erro na compra:", err);
+        console.error("Purchase error:", err);
         Alert.alert("Error", "Could not complete the purchase right now.");
       }
     }
   };
 
   const buyStamina = () => {
-    const STAMINA_COST = 100;
     if (stamina >= MAX_STAMINA)
       return Alert.alert("Full Energy", "Your energy is already at maximum!");
-    if (coins < STAMINA_COST) {
+    if (coins < STAMINA_REFILL_COST) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return Alert.alert(
-        "Insufficient Balance",
-        "You need more stars to buy energy.",
+        "Not enough stars",
+        `You need ${STAMINA_REFILL_COST} stars to refill your energy.`,
       );
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setCoins((prev) => prev - STAMINA_COST);
+    setCoins((prev) => prev - STAMINA_REFILL_COST);
     setStamina(MAX_STAMINA);
   };
 
-  // --- Rotação ---
+  // ─── 3D rotation ──────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -423,7 +463,7 @@ export default function HomeScreen() {
         xp={xp}
         stamina={stamina}
         coins={coins}
-        onOpenStore={() => setIsStoreVisible(true)}
+        onOpenStore={openStore}
       />
 
       <View style={styles.statusGrid}>
@@ -461,15 +501,17 @@ export default function HomeScreen() {
         isBathing={hygiene < 50}
       />
 
-      <ActionDock onAction={handleAction} />
+      <ActionDock onAction={handleAction} coins={coins} />
 
-      {/* O modal agora recebe os "Packages" em vez dos itens do RNIap */}
       <StoreModal
         visible={isStoreVisible}
         onClose={() => setIsStoreVisible(false)}
         onBuyStamina={buyStamina}
         onPurchase={handlePurchase}
         products={products}
+        showFirstTimeOffer={!hasSeenFirstOffer}
+        onFirstOfferSeen={dismissFirstOffer}
+        staminaRefillCost={STAMINA_REFILL_COST}
       />
     </View>
   );

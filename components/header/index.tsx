@@ -1,5 +1,5 @@
 import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated";
@@ -36,7 +36,12 @@ export default function Header({ tamagotchi, xp, stamina, coins, onOpenStore }: 
           </View>
         </View>
 
-        <TouchableOpacity style={[styles.staminaRow, { backgroundColor: c.surfaceSunken }]} onPress={onOpenStore}>
+        <Pressable
+          style={[styles.staminaRow, { backgroundColor: c.surfaceSunken }]}
+          onPress={onOpenStore}
+          accessibilityRole="button"
+          accessibilityLabel={`${stamina} of ${MAX_STAMINA} actions remaining. Tap to open the store`}
+        >
           <Text variant="overline" color={c.textMuted} style={styles.staminaLabel}>ACTIONS</Text>
           {[...Array(MAX_STAMINA)].map((_, i) => (
             <MaterialCommunityIcons
@@ -44,6 +49,7 @@ export default function Header({ tamagotchi, xp, stamina, coins, onOpenStore }: 
               name="lightning-bolt"
               size={16}
               color={i < stamina ? c.accentStar : c.border}
+              importantForAccessibility="no"
             />
           ))}
           {stamina === 0 && (
@@ -51,22 +57,32 @@ export default function Header({ tamagotchi, xp, stamina, coins, onOpenStore }: 
               <Text variant="caption" color={c.onPrimary} weight="bold">+</Text>
             </View>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      <TouchableOpacity style={styles.right} onPress={onOpenStore}>
+      <Pressable
+        style={styles.right}
+        onPress={onOpenStore}
+        accessibilityRole="button"
+        accessibilityLabel={`${coins} stars. Tap to open the store`}
+      >
         <BlurView
           intensity={80}
           tint="light"
           style={[styles.coinBadge, { borderColor: c.glassBorder }]}
         >
-          <MaterialCommunityIcons name="star-four-points" size={14} color={c.accentStar} />
+          <MaterialCommunityIcons
+            name="star-four-points"
+            size={14}
+            color={c.accentStar}
+            importantForAccessibility="no"
+          />
           <Text variant="data" color={c.text} style={styles.coinText}>{coins}</Text>
           <View style={[styles.miniBadge, { backgroundColor: c.primary }]}>
             <Text variant="caption" color={c.onPrimary} weight="bold">+</Text>
           </View>
         </BlurView>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }

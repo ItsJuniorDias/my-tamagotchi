@@ -146,7 +146,12 @@ export default function App() {
         <View style={[styles.container, { backgroundColor: c.background }]}>
           <LinearGradient colors={Gradients.app} style={StyleSheet.absoluteFill} />
           <FloatingImages />
-          <View style={styles.textContainer}>
+          <View
+            style={styles.textContainer}
+            accessible
+            accessibilityRole="header"
+            accessibilityLabel="My Tamagotchi. Virtual creature lab. Hatch, raise and evolve your own pocket companion."
+          >
             <Text variant="overline" color={c.primary} style={styles.eyebrow}>
               VIRTUAL CREATURE LAB
             </Text>
