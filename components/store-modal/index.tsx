@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo } from "react";
-import { Modal, View, Pressable, StyleSheet, ScrollView } from "react-native";
+import {
+  Modal,
+  View,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { BlurView } from "expo-blur";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Text from "@/components/text";
@@ -64,11 +70,11 @@ export default function StoreModal({
   // Order: MICRO → STARTER → BASIC → CHEST → MEGA
   const orderedPacks: StarPack[] = useMemo(
     () => [
-      // STAR_PACKS.MICRO,
-      // STAR_PACKS.STARTER,
+      STAR_PACKS.MICRO,
+      STAR_PACKS.STARTER,
       STAR_PACKS.BASIC,
       STAR_PACKS.CHEST,
-      // STAR_PACKS.MEGA,
+      STAR_PACKS.MEGA,
     ],
     [],
   );
@@ -144,12 +150,19 @@ export default function StoreModal({
                 <Text variant="heading" color={c.text} style={styles.itemTitle}>
                   Refill energy
                 </Text>
-                <Text variant="caption" color={c.textSecondary} weight="medium">
+                <Text
+                  variant="caption"
+                  color={c.textSecondary}
+                  weight="medium"
+                >
                   Instantly restore 5 actions
                 </Text>
               </View>
               <View
-                style={[styles.buyButton, { backgroundColor: c.surfaceSunken }]}
+                style={[
+                  styles.buyButton,
+                  { backgroundColor: c.surfaceSunken },
+                ]}
               >
                 <Text variant="data" color={c.text} style={styles.buyText}>
                   {staminaRefillCost} ⭐
