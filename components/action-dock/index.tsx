@@ -65,11 +65,17 @@ export default function ActionDock({
               ]}
               onPress={() => onAction(a.key)}
               accessibilityRole="button"
-              accessibilityLabel={`${a.labelName}, costs ${a.cost} stars`}
+              accessibilityLabel={
+                a.cost === 0
+                  ? `${a.labelName}, free`
+                  : `${a.labelName}, costs ${a.cost} stars`
+              }
               accessibilityHint={
-                affordable
-                  ? `Uses 1 energy slot and ${a.cost} stars`
-                  : "You need more stars — opens the store"
+                a.cost === 0
+                  ? "Uses 1 energy slot"
+                  : affordable
+                    ? `Uses 1 energy slot and ${a.cost} stars`
+                    : "You need more stars — opens the store"
               }
             >
               <View
@@ -89,11 +95,17 @@ export default function ActionDock({
               </View>
               <Text
                 variant="label"
-                color={affordable ? c.textSecondary : c.danger}
+                color={
+                  a.cost === 0
+                    ? c.textSecondary
+                    : affordable
+                      ? c.textSecondary
+                      : c.danger
+                }
                 weight="bold"
                 style={[styles.label, a.hero && { marginTop: 4 }]}
               >
-                {a.cost} ⭐
+                {a.cost === 0 ? "Free" : `${a.cost} ⭐`}
               </Text>
             </Pressable>
           );

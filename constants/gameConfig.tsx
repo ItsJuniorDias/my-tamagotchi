@@ -25,30 +25,42 @@ export const STAMINA_RECHARGE_TIME = 30 * 60 * 1000; // 30 min per slot
 
 // ─────────────────────────────────────────────────────────────
 //  ECONOMY — starter + action costs
-//  Designed to run the starter balance to zero within one session,
-//  landing the player on the paywall while they're engaged.
+//
+//  Rollback parcial em 30/07/2026: shipado v6 tinha starter 40 + stats
+//  25/20/35/30 + sleep pago (3 stars). Zero conversões em ~4 dias porque
+//  o player travava em ~5 min (starter + stamina zeravam antes de dar
+//  tempo de estabelecer vínculo com o pet). Direção "priorizar retenção":
+//  reverte sleep pra grátis, sobe stats iniciais, starter em 60.
+//  Não voltamos pros 250 stars do v5 (isso também não convertia). O
+//  compromisso: player tem alguns minutos de folga pra se conectar antes
+//  de bater na loja.
 // ─────────────────────────────────────────────────────────────
-export const STARTER_COINS = 40;
+export const STARTER_COINS = 60;
 
-// Pet stats — start LOW so the first action feels necessary,
-// not optional. Was: 60/40/90/100 (only mood created pressure).
+// Stats iniciais em zona média (não altos como v5 pra ter algum senso de
+// urgência, mas nem no vermelho como v6). Nenhum stat abaixo de 50 na
+// entrada — evita a sensação de "pet em crise no primeiro segundo".
+// v5 era 60/40/90/100, v6 shipado 25/20/35/30, agora:
 export const INITIAL_STATS = {
-  hunger: 25,
-  happiness: 20,
-  energy: 35,
-  hygiene: 30,
+  hunger: 55,
+  happiness: 50,
+  energy: 70,
+  hygiene: 80,
 };
 
-// Action costs in stars. Sleep is NO LONGER free — every action has a price.
+// Sleep volta a ser GRÁTIS — é a única "regen natural" que sustenta o loop
+// não-pagante. Gatear sleep vira pay-to-not-suffer em vez de pay-to-skip,
+// que é o único F2P que funciona em Kids-adjacent. Os outros custos ficam
+// como estão (feed 8 / clean 5 / play 6) — margem pra loja continua.
 export const ACTION_COSTS = {
   feed: 8,
   clean: 5,
   play: 6,
-  sleep: 3,
+  sleep: 0,
 };
 
-// Instant stamina refill in stars. Was 100 (never worth it).
-// At 40 stars, ~2 refills = one $4.99 pack, which is intentional.
+// Instant stamina refill em stars. Continua em 40 — no starter novo de 60,
+// vira uma decisão real: pagar 40 pra continuar OU esperar 30 min.
 export const STAMINA_REFILL_COST = 40;
 
 // Threshold for the "low stat" nudge notification.
